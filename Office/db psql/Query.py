@@ -1,0 +1,84 @@
+from connection_DB import conn, cur
+
+# PostgreSQL connection details
+conn = psycopg2.connect(
+    host="localhost",
+    database="shopdb",
+    user="postgres",       # apna username
+    password="admin123",   # apna password
+    port="5432"
+)
+
+cur = conn.cursor()
+
+# -----------------------------
+# Query 1: LEFT JOIN
+# -----------------------------
+query1 = """
+SELECT 
+    c.id AS customer_id, 
+    c.name AS customer_name, 
+    COALESCE(SUM(p.price * o.quantity), 0) AS total_order_value
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+LEFT JOIN products p ON o.product_id = p.id
+GROUP BY c.id, c.name
+ORDER BY c.id;
+"""
+
+cur.execute(query1)
+results_query1 = cur.fetchall()
+print("----- Query 1: LEFT JOIN -----")
+for row in results_query1:
+    print(row)
+
+# -----------------------------
+# Query 2: RIGHT JOIN
+# Products never ordered
+# -----------------------------
+query2 = """
+SELECT 
+    p.id AS product_id, 
+    p.name AS product_name
+FROM products p
+RIGHT JOIN orders o ON p.id = o.product_id
+WHERE o.id IS NULL
+ORDER BY p.id;
+"""
+
+cur.execute(query2)
+results_query2 = cur.fetchall()
+print("\n----- Query 2: RIGHT JOIN -----")
+for row in results_query2:
+    print(row)
+
+# -----------------------------
+# Query 3: INNER JOIN
+# High-value orders (price > 50)
+# -----------------------------
+query3 = """
+SELECT 
+    o.id AS order_id,
+    c.name AS customer_name,
+    p.name AS product_name,
+    p.price,
+    o.quantity,
+    (p.price * o.quantity) AS total_value
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+INNER JOIN products p ON o.product_id = p.id
+WHERE p.price > 50
+ORDER BY total_value DESC;
+"""
+
+cur.execute(query3)
+results_query3 = cur.fetchall()
+print("\n----- Query 3: INNER JOIN (High-value orders) -----")
+for row in results_query3:
+    print(row)
+
+# -----------------------------
+# Close connection
+# -----------------------------
+cur.close()
+conn.close()
