@@ -1,0 +1,95 @@
+import psycopg2
+from connection_DB import conn, cur   # agar already connection file me bana rakha hai
+
+# Agar connection_DB use nahi karna ho to ye use karo:
+"""
+conn = psycopg2.connect(
+    host="localhost",
+    database="shopdb",
+    user="postgres",
+    password="admin123",
+    port="5432"
+)
+cur = conn.cursor()
+"""
+
+# Folder jahan CSV files save hongi
+base_path = "/tmp"   # Windows: r"C:\Users\YourName\Desktop"
+
+# -----------------------------
+# Query 1: LEFT JOIN
+# -----------------------------
+query1 = """
+SELECT 
+    c.id AS customer_id, 
+    c.name AS customer_name, 
+    COALESCE(SUM(p.price * o.quantity), 0) AS total_order_value
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+LEFT JOIN products p ON o.product_id = p.id
+GROUP BY c.id, c.name
+ORDER BY c.id
+"""
+
+file1 = f"{base_path}/customer_total_order_value.csv"
+copy_sql1 = f"COPY ({query1}) TO STDOUT WITH CSV HEADER"
+
+with open(file1, "w") as f:
+    cur.copy_expert(copy_sql1, f)
+
+print("✅ Query 1 exported to", file1)
+
+# -----------------------------
+# Query 2: Products Never Ordered
+# -----------------------------
+query2 = """
+SELECT 
+    p.id AS product_id, 
+    p.name AS product_name
+FROM products p
+LEFT JOIN orders o ON p.id = o.product_id
+WHERE o.id IS NULL
+ORDER BY p.id
+"""
+
+file2 = f"{base_path}/products_never_ordered.csv"
+copy_sql2 = f"COPY ({query2}) TO STDOUT WITH CSV HEADER"
+
+with open(file2, "w") as f:
+    cur.copy_expert(copy_sql2, f)
+
+print("✅ Query 2 exported to", file2)
+
+# -----------------------------
+# Query 3: High-value Orders
+# -----------------------------
+query3 = """
+SELECT 
+    o.id AS order_id,
+    c.name AS customer_name,
+    p.name AS product_name,
+    p.price,
+    o.quantity,
+    (p.price * o.quantity) AS total_value
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.id
+INNER JOIN products p ON o.product_id = p.id
+WHERE p.price > 50
+ORDER BY total_value DESC
+"""
+
+file3 = f"{base_path}/high_value_orders.csv"
+copy_sql3 = f"COPY ({query3}) TO STDOUT WITH CSV HEADER"
+
+with open(file3, "w") as f:
+    cur.copy_expert(copy_sql3, f)
+
+print("✅ Query 3 exported to", file3)
+
+# -----------------------------
+# Close connection
+# -----------------------------
+cur.close()
+conn.close()
+
+print("\n🎉 All CSV files created successfully!")
