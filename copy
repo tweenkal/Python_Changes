@@ -1,0 +1,106 @@
+import psycopg2
+
+# ---------- Database Connection ----------
+conn = psycopg2.connect(
+    host="localhost",
+    database="companydb",
+    user="postgres",
+    password="odoo",
+    port="5432"
+)
+
+cur = conn.cursor()
+
+# ------- LEFT JOIN --------
+print("\n-----Left Join: Total Order Value Per Customer-------")
+query1 = """
+SELECT 
+    c.id AS customer_id, 
+    c.name AS customer_name, 
+    COALESCE(SUM(p.price * o.quantity), 0) AS total_order_value
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+LEFT JOIN products p ON o.product_id = p.id
+GROUP BY c.id, c.name
+ORDER BY c.id
+"""
+
+cur.execute(query1)
+for row in cur.fetchall():
+    print(row)
+
+copy_query1 = f"""
+COPY (
+{query1}
+) TO STDOUT WITH CSV HEADER
+"""
+
+with open("customer_order_value.csv", "w") as f:
+    cur.copy_expert(copy_query1, f)
+
+print("✅ customer_order_value.csv exported")
+
+
+# ------- Products Never Ordered -------
+print("\n-----Products Never Ordered-------")
+query2 = """
+SELECT 
+    p.id AS product_id, 
+    p.name AS product_name
+FROM products p
+LEFT JOIN orders o ON p.id = o.product_id
+WHERE o.id IS NULL
+ORDER BY p.id
+"""
+
+cur.execute(query2)
+for row in cur.fetchall():
+    print(row)
+
+copy_query2 = f"""
+COPY (
+{query2}
+) TO STDOUT WITH CSV HEADER
+"""
+
+with open("products_never_ordered.csv", "w") as f:
+    cur.copy_expert(copy_query2, f)
+
+print("✅ products_never_ordered.csv exported")
+
+
+# --------- INNER JOIN -----------
+print("\n------Inner Join: Order Details------")
+query3 = """
+SELECT 
+    o.id AS order_id, 
+    c.name AS customer_name, 
+    p.name AS product_name, 
+    p.price, 
+    o.quantity
+FROM orders o 
+INNER JOIN customers c ON o.customer_id = c.id 
+INNER JOIN products p ON o.product_id = p.id
+"""
+
+cur.execute(query3)
+for row in cur.fetchall():
+    print(row)
+
+copy_query3 = f"""
+COPY (
+{query3}
+) TO STDOUT WITH CSV HEADER
+"""
+
+with open("order_details.csv", "w") as f:
+    cur.copy_expert(copy_query3, f)
+
+print("✅ order_details.csv exported")
+
+
+# ---------- Close Connection ----------
+cur.close()
+conn.close()
+
+print("\n🎉 All queries executed and CSV files created successfully")
