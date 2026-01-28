@@ -1,0 +1,27 @@
+# Approval levels and thresholds
+approval_levels = [("Manager", 1000), ("Finance", 5000), ("Director", 10000)]
+
+# Decorator for logging
+def audit_log(func):
+    def wrapper(request, i=0):
+        print(f"[AUDIT] {request['name']} at {approval_levels[i][0]}")
+        result = func(request, i)
+        print(f"[AUDIT] {request['name']} - Status: {result}")
+        return result
+    return wrapper
+
+# Recursive approval function
+@audit_log
+def approve(request, i=0):
+    if i == len(approval_levels): 
+        return "Approved"
+    level, limit = approval_levels[i]
+    if request['amount'] > limit: 
+        return "Rejected"
+    return approve(request, i+1)
+
+# Example requests
+requests = [{"name":"A","amount":800}, {"name":"B","amount":4500}, {"name":"C","amount":12000}]
+
+for r in requests:
+    print(f"\nFinal Status: {approve(r)}")
