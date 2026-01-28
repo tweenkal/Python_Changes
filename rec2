@@ -1,0 +1,13 @@
+function processApproval(request, level):
+
+    decision = level.review(request)
+
+    if decision == "REJECTED":
+        return "REJECTED"
+
+    if level.nextLevel == null:
+        return "APPROVED"
+
+    return processApproval(request, level.nextLevel)
+
+processApproval(request,level)
