@@ -1,0 +1,10 @@
+def count_basic_parts(part):
+    if not part.subparts:   # Base case (no children)
+        return 1
+    
+    total = 0
+    for sub in part.subparts:
+        total += count_basic_parts(sub)
+    return total
+
+print("Total basic parts:", count_basic_parts(bicycle))
