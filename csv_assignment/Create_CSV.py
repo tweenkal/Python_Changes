@@ -1,23 +1,28 @@
 import csv
 
-filename = 'dynamic_data.csv'
-fieldnames = ['Country', 'State', 'City']
+# File name
+csv_filename = 'dynamic_data.csv'
 
-with open(filename, 'w', newline='') as file:
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
+# CSV headers (use proper capitalization)
+csv_headers = ['Country', 'State', 'City']
+
+with open(csv_filename, 'w', newline='') as csv_file:
+    writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
     writer.writeheader()
 
     last_country = ''
     last_state = ''
 
     while True:
-        add_row = input('Do you want to add a new entry? (y/n): ').strip().lower()
-        if add_row != 'y':
+        add_entry = input('Do you want to add a new entry? (y/n): ').strip().lower()
+        if add_entry != 'y':
             break
 
+        # Get country and state
         country = input('Enter Country: ').strip()
         state = input('Enter State: ').strip()
 
+        # Get multiple cities for this state
         cities = []
         while True:
             city = input('Enter City (or type "done" to finish this state): ').strip()
@@ -25,24 +30,25 @@ with open(filename, 'w', newline='') as file:
                 break
             cities.append(city)
 
-        # Write rows for all cities
+        # Write each city as a row, leaving country/state blank if repeated
         for i, city in enumerate(cities):
-            row = {}
-            # Only fill country/state if it's different from last written
+            row_data = {}
+            # Only write country if it's different from last
             if country != last_country:
-                row['Country'] = country
+                row_data['Country'] = country
                 last_country = country
                 last_state = ''  # Reset last_state when country changes
             else:
-                row['Country'] = ''
+                row_data['Country'] = ''
 
+            # Only write state if it's different from last
             if state != last_state:
-                row['State'] = state
+                row_data['State'] = state
                 last_state = state
             else:
-                row['State'] = ''
+                row_data['State'] = ''
 
-            row['City'] = city
-            writer.writerow(row)
+            row_data['City'] = city
+            writer.writerow(row_data)
 
-print(f'{filename} created successfully with filled data.')
+print(f'{csv_filename} created successfully with proper formatting.')
