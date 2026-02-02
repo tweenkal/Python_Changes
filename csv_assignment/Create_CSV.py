@@ -7,35 +7,42 @@ with open(filename, 'w', newline='') as file:
     writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
 
+    last_country = ''
+    last_state = ''
+
     while True:
-        # Ask if user wants to add a new row
         add_row = input('Do you want to add a new entry? (y/n): ').strip().lower()
         if add_row != 'y':
             break
 
-        # Initialize row dictionary
-        row = {}
+        country = input('Enter Country: ').strip()
+        state = input('Enter State: ').strip()
 
-        # Ask for each field
-        add_country = input('Do you want to enter Country? (y/n): ').strip().lower()
-        if add_country == 'y':
-            row['Country'] = input('Enter Country: ').strip()
-        else:
-            row['Country'] = ''
+        cities = []
+        while True:
+            city = input('Enter City (or type "done" to finish this state): ').strip()
+            if city.lower() == 'done':
+                break
+            cities.append(city)
 
-        add_state = input('Do you want to enter State? (y/n): ').strip().lower()
-        if add_state == 'y':
-            row['State'] = input('Enter State: ').strip()
-        else:
-            row['State'] = ''
+        # Write rows for all cities
+        for i, city in enumerate(cities):
+            row = {}
+            # Only fill country/state if it's different from last written
+            if country != last_country:
+                row['Country'] = country
+                last_country = country
+                last_state = ''  # Reset last_state when country changes
+            else:
+                row['Country'] = ''
 
-        add_city = input('Do you want to enter City? (y/n): ').strip().lower()
-        if add_city == 'y':
-            row['City'] = input('Enter City: ').strip()
-        else:
-            row['City'] = ''
+            if state != last_state:
+                row['State'] = state
+                last_state = state
+            else:
+                row['State'] = ''
 
-        # Write the row to CSV
-        writer.writerow(row)
+            row['City'] = city
+            writer.writerow(row)
 
-print(f'{filename} created successfully with filled data')
+print(f'{filename} created successfully with filled data.')
