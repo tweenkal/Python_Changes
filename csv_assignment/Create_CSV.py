@@ -1,54 +1,62 @@
-import csv
+Menu:
+1. Add Country
+2. Add State
+3. Add City
+4. Exit
+Enter your choice (1-4): 1
+Enter Country: USA
+Country set to 'USA'
 
-# File name
-csv_filename = 'dynamic_data.csv'
+Menu:
+1. Add Country
+2. Add State
+3. Add City
+4. Exit
+Enter your choice (1-4): 2
+Enter State: California
+State set to 'California' under Country 'USA'
 
-# CSV headers (use proper capitalization)
-csv_headers = ['Country', 'State', 'City']
+Menu:
+1. Add Country
+2. Add State
+3. Add City
+4. Exit
+Enter your choice (1-4): 3
+Enter City: Los Angeles
+City 'Los Angeles' added under California, USA
+Do you want to add another city? (y/n): y
+Enter City: San Francisco
+City 'San Francisco' added under California, USA
+Do you want to add another city? (y/n): n
 
-with open(csv_filename, 'w', newline='') as csv_file:
-    writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
-    writer.writeheader()
+Menu:
+1. Add Country
+2. Add State
+3. Add City
+4. Exit
+Enter your choice (1-4): 2
+Enter State: New York
+State set to 'New York' under Country 'USA'
 
-    last_country = ''
-    last_state = ''
+Menu:
+1. Add Country
+2. Add State
+3. Add City
+4. Exit
+Enter your choice (1-4): 3
+Enter City: New York City
+City 'New York City' added under New York, USA
+Do you want to add another city? (y/n): y
+Enter City: Buffalo
+City 'Buffalo' added under New York, USA
+Do you want to add another city? (y/n): n
 
-    while True:
-        add_entry = input('Do you want to add a new entry? (y/n): ').strip().lower()
-        if add_entry != 'y':
-            break
+Menu:
+1. Add Country
+2. Add State
+3. Add City
+4. Exit
+Enter your choice (1-4): 4
+Exiting program...
 
-        # Get country and state
-        country = input('Enter Country: ').strip()
-        state = input('Enter State: ').strip()
-
-        # Get multiple cities for this state
-        cities = []
-        while True:
-            city = input('Enter City (or type "done" to finish this state): ').strip()
-            if city.lower() == 'done':
-                break
-            cities.append(city)
-
-        # Write each city as a row, leaving country/state blank if repeated
-        for i, city in enumerate(cities):
-            row_data = {}
-            # Only write country if it's different from last
-            if country != last_country:
-                row_data['Country'] = country
-                last_country = country
-                last_state = ''  # Reset last_state when country changes
-            else:
-                row_data['Country'] = ''
-
-            # Only write state if it's different from last
-            if state != last_state:
-                row_data['State'] = state
-                last_state = state
-            else:
-                row_data['State'] = ''
-
-            row_data['City'] = city
-            writer.writerow(row_data)
-
-print(f'{csv_filename} created successfully with proper formatting.')
+dynamic_data.csv created successfully with proper formatting.
