@@ -1,0 +1,13 @@
+ak_library_management/
+├── __init__.py
+├── __manifest__.py
+├── models/
+│   ├── __init__.py
+│   ├── library_book.py
+│   └── book_category.py
+├── security/
+│   └── ir.model.access.csv
+└── views/
+    ├── library_book_views.xml
+    ├── book_category_views.xml
+    └── menu.xml
