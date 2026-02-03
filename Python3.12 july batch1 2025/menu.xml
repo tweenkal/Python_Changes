@@ -1,0 +1,22 @@
+<odoo>
+
+    <!-- MAIN MENU -->
+    <menuitem id="menu_library_root"
+              name="Library Management"
+              sequence="10"/>
+
+    <!-- BOOKS MENU -->
+    <menuitem id="menu_library_books"
+              name="Books"
+              parent="menu_library_root"
+              action="action_library_books"
+              sequence="1"/>
+
+    <!-- CATEGORY MENU -->
+    <menuitem id="menu_book_category"
+              name="Category"
+              parent="menu_library_root"
+              action="action_book_category"
+              sequence="2"/>
+
+</odoo>
