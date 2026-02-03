@@ -1,69 +1,64 @@
 import csv
 
-# Output CSV file name
-output_csv_file = 'dynamic_data.csv'
+filename = 'dynamic_data.csv'
+fieldnames = ['Country', 'State', 'City']
 
-# CSV headers
-csv_headers = ['Country', 'State', 'City']
-
-# Track current selections
-current_country = ''
-current_state = ''
-
-# Open CSV for writing
-with open(output_csv_file, 'w', newline='') as csv_file:
-    writer = csv.DictWriter(csv_file, fieldnames=csv_headers)
+with open(filename, 'w', newline='') as file:
+    writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
 
-    while True:
-        # Display menu
-        print("\nMenu:")
-        print("1. Add Country")
-        print("2. Add State")
-        print("3. Add City")
-        print("4. Exit")
-        choice = input("Enter your choice (1-4): ").strip()
+    while True:  # COUNTRY LEVEL
+        print("\n1. Add Country")
+        print("2. Finish and Save")
+        choice_country = input("Choose an option: ")
 
-        if choice == '1':
-            current_country = input("Enter Country: ").strip()
-            current_state = ''  # Reset state when country changes
-            print(f"Country set to '{current_country}'")
-
-        elif choice == '2':
-            if not current_country:
-                print("Please add a Country first!")
-                continue
-            current_state = input("Enter State: ").strip()
-            print(f"State set to '{current_state}' under Country '{current_country}'")
-
-        elif choice == '3':
-            if not current_country:
-                print("Please add a Country first!")
-                continue
-            if not current_state:
-                print("Please add a State first!")
-                continue
-
-            while True:
-                city = input('Enter City: ').strip()
-                row_data = {
-                    'Country': current_country,
-                    'State': current_state,
-                    'City': city
-                }
-                writer.writerow(row_data)
-                print(f"City '{city}' added under {current_state}, {current_country}")
-
-                # Ask if user wants to add another city
-                add_another = input("Do you want to add another city? (y/n): ").strip().lower()
-                if add_another != 'y':
-                    break
-
-        elif choice == '4':
-            print("Exiting program...")
+        if choice_country == '2':
             break
+        elif choice_country != '1':
+            print("Invalid choice!")
+            continue
 
-        else:
-            print("Invalid choice. Please enter a number from 1 to 4.")
+        country = input("Enter Country name: ")
+        first_state_for_country = True  # Track first state
 
-print(f"\n{output_csv_file} created successfully with proper formatting.")
+        while True:  # STATE LEVEL
+            print(f"\n--- Country: {country} ---")
+            print("1. Add State")
+            print("2. Go Back to Country Menu")
+            choice_state = input("Choose an option: ")
+
+            if choice_state == '2':
+                break
+            elif choice_state != '1':
+                print("Invalid choice!")
+                continue
+
+            state = input("Enter State name: ")
+            first_city_for_state = True  # Track first city
+
+            while True:  # CITY LEVEL
+                print(f"\n--- State: {state} ({country}) ---")
+                print("1. Add City")
+                print("2. Go Back to State Menu")
+                choice_city = input("Choose an option: ")
+
+                if choice_city == '2':
+                    break
+                elif choice_city != '1':
+                    print("Invalid choice!")
+                    continue
+
+                city = input("Enter City name: ")
+
+                writer.writerow({
+                    'Country': country if first_state_for_country and first_city_for_state else '',
+                    'State': state if first_city_for_state else '',
+                    'City': city
+                })
+
+                first_state_for_country = False
+                first_city_for_state = False
+
+                print("✅ City added!")
+
+print(f"\n🎉 {filename} created successfully with grouped structure!")
