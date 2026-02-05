@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_library_root" name="Library Management" sequence="10"/>
+
+    <!-- Book Menu -->
+    <menuitem id="menu_library_book" 
+              name="Books" 
+              parent="menu_library_root" 
+              action="action_library_books" 
+              sequence="1"/>
+
+    <!-- Category Menu -->
+    <menuitem id="menu_library_category" 
+              name="Category" 
+              parent="menu_library_root" 
+              action="action_book_category" 
+              sequence="2"/>
+</odoo>
