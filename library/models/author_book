@@ -1,0 +1,18 @@
+from odoo import models, fields, api
+
+class AuthorBook(models.Model):
+    _name = 'author.book'
+    _description = 'Author Book Details'
+
+    book_id = fields.Many2one('library.book', string="Book", required=True)
+    isbn = fields.Char(string="ISBN")
+    publication_date = fields.Date(string="Publication Date")
+    price = fields.Float(string="Price")
+
+    @api.onchange('book_id')
+    def _onchange_book_id(self):
+        """Auto-fill fields when book is selected (demo logic)"""
+        if self.book_id:
+            self.isbn = f"ISBN-{self.book_id.id}"
+            self.price = 100.0
+            self.publication_date = fields.Date.today()
