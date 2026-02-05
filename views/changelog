@@ -1,0 +1,8 @@
+# AK Library Management Module Changelog
+
+## 19.0.1.0.0
+- Initial version.
+- Added library.book and book.category models.
+- Implemented list and form views.
+- Added Description tab for book summaries.
+- Added menu structure for Books and Categories.
