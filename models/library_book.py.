@@ -1,18 +1,14 @@
-# -*- coding: utf-8 -*-
 from odoo import models, fields
 
 class LibraryBook(models.Model):
-    """
-    Model for storing Library Book details.
-    """
     _name = 'library.book'
     _description = 'Library Book'
 
     name = fields.Char(string='Book Title', required=True)
     isbn = fields.Char(string='ISBN Number')
-    publication_date = fields.Date(string='Publication Date')
-    price = fields.Float(string='Price')
+    publication_date = fields.Date(string='Date of Publication')
+    price = fields.Float(string='Book Price')
     pages = fields.Integer(string='Number of Pages')
     description = fields.Html(string='Book Summary')
-    image_1920 = fields.Image(string='Book Image')
+    image_1920 = fields.Image(string='Book Image', max_width=1920, max_height=1080)
     category_id = fields.Many2one('book.category', string='Category')
