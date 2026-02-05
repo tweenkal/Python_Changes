@@ -1,23 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- Action for Library Books -->
-    <record id="action_library_books" model="ir.actions.act_window">
-        <field name="name">Books</field>
-        <field name="res_model">library.book</field>
-        <field name="view_mode">tree,form</field>
-        <field name="help" type="html">
-            <p>
-                Manage library books here.
-            </p>
-        </field>
-    </record>
 
     <!-- Tree View -->
     <record id="view_library_book_tree" model="ir.ui.view">
         <field name="name">library.book.tree</field>
         <field name="model">library.book</field>
         <field name="arch" type="xml">
-            <tree>
+            <tree string="Books">
                 <field name="name"/>
                 <field name="isbn"/>
                 <field name="price"/>
@@ -31,17 +19,22 @@
         <field name="name">library.book.form</field>
         <field name="model">library.book</field>
         <field name="arch" type="xml">
-            <form string="Book">
+            <form string="Book Details">
                 <sheet>
                     <group>
-                        <field name="name"/>
-                        <field name="isbn"/>
-                        <field name="publication_date"/>
-                        <field name="price"/>
-                        <field name="pages"/>
-                        <field name="image_1920" widget="image"/>
-                        <field name="category_id"/>
+                        <group>
+                            <field name="name"/>
+                            <field name="isbn"/>
+                            <field name="publication_date"/>
+                            <field name="category_id"/>
+                        </group>
+                        <group>
+                            <field name="price"/>
+                            <field name="pages"/>
+                            <field name="image_1920" widget="image"/>
+                        </group>
                     </group>
+
                     <notebook>
                         <page string="Description">
                             <field name="description"/>
@@ -57,10 +50,19 @@
         <field name="name">library.book.search</field>
         <field name="model">library.book</field>
         <field name="arch" type="xml">
-            <search>
-                <field name="name" string="Book Title"/>
-                <field name="isbn" string="ISBN"/>
+            <search string="Search Books">
+                <field name="name"/>
+                <field name="isbn"/>
             </search>
         </field>
     </record>
+
+    <!-- Action -->
+    <record id="action_library_book" model="ir.actions.act_window">
+        <field name="name">Books</field>
+        <field name="res_model">library.book</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_library_book_search"/>
+    </record>
+
 </odoo>
