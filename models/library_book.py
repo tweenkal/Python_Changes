@@ -2,7 +2,9 @@
 from odoo import models, fields
 
 class LibraryBook(models.Model):
-    """Model to store book-related details."""
+    """
+    Model for storing Library Book details.
+    """
     _name = 'library.book'
     _description = 'Library Book'
 
