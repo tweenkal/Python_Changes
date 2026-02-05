@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'AK Library Management',
-    'version': '19.0.1.0.0',
-    'summary': 'Manage Library Books and Categories',
-    'description': 'Library Management module with books and categories.',
-    'author': 'Your Name',
-    'website': 'https://www.aktivsoftware.com',
-    'category': 'Tools',
+    'version': '1.0',
+    'summary': 'Manage library books and categories',
+    'category': 'Management',
     'depends': ['base', 'web'],
+    'author': 'Tweenkal',
     'data': [
         'security/ir.model.access.csv',
         'views/library_book_views.xml',
         'views/book_category_views.xml',
+        'views/library_menu_views.xml',
     ],
     'installable': True,
     'application': True,
-    'license': 'LGPL-3',
+    'auto_install': False,
+    'license': 'AGPL-3',
 }
