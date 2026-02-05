@@ -3,8 +3,16 @@ import csv
 filename = 'dynamic_data.csv'
 fieldnames = ['Country', 'State', 'City']
 
-# Temporary storage to maintain grouped structure
-data = []
+countries = {}  
+# Structure will be:
+# {
+#   "India": {
+#       "states": {
+#           "Gujarat": ["Ahmedabad", "Surat"],
+#           "Maharashtra": ["Mumbai"]
+#       }
+#   }
+# }
 
 while True:
     print("\nMain Menu")
@@ -15,55 +23,116 @@ while True:
 
     choice = input("Choose an option: ")
 
+    # ---------------- ADD COUNTRY ----------------
     if choice == '1':
         while True:
-            country = input("Enter Country name: ")
-            data.append({'Country': country, 'State': '', 'City': ''})
-            another = input("Do you want to add another country? (y/n): ").lower()
+            country = input("Enter Country name: ").strip()
+
+            if country in countries:
+                print("Country already exists!")
+            else:
+                countries[country] = {"states": {}}
+                print(f"{country} added successfully!")
+
+            another = input("Add another country? (y/n): ").lower()
             if another != 'y':
                 break
 
+    # ---------------- ADD STATE ----------------
     elif choice == '2':
+        if not countries:
+            print("Please add a country first!")
+            continue
+
         while True:
-            state = input("Enter State name: ")
-            country_for_state = input("Enter Country for this State: ")
-            data.append({'Country': country_for_state, 'State': state, 'City': ''})
-            another = input("Do you want to add another state? (y/n): ").lower()
+            print("\nAvailable Countries:")
+            for i, c in enumerate(countries.keys(), 1):
+                print(f"{i}. {c}")
+
+            try:
+                c_index = int(input("Select country number: ")) - 1
+                country_name = list(countries.keys())[c_index]
+            except (ValueError, IndexError):
+                print("Invalid selection!")
+                continue
+
+            state = input("Enter State name: ").strip()
+
+            if state in countries[country_name]["states"]:
+                print("State already exists in this country!")
+            else:
+                countries[country_name]["states"][state] = []
+                print(f"{state} added to {country_name}!")
+
+            another = input("Add another state? (y/n): ").lower()
             if another != 'y':
                 break
 
+    # ---------------- ADD CITY ----------------
     elif choice == '3':
+        if not countries:
+            print("Please add a country and state first!")
+            continue
+
         while True:
-            city = input("Enter City name: ")
-            state_for_city = input("Enter State for this City: ")
-            country_for_city = input("Enter Country for this City: ")
-            data.append({'Country': country_for_city, 'State': state_for_city, 'City': city})
-            another = input("Do you want to add another city? (y/n): ").lower()
+            print("\nAvailable Countries:")
+            for i, c in enumerate(countries.keys(), 1):
+                print(f"{i}. {c}")
+
+            try:
+                c_index = int(input("Select country number: ")) - 1
+                country_name = list(countries.keys())[c_index]
+            except (ValueError, IndexError):
+                print("Invalid country selection!")
+                continue
+
+            states = countries[country_name]["states"]
+            if not states:
+                print("No states in this country. Add a state first!")
+                continue
+
+            print("\nAvailable States:")
+            for i, s in enumerate(states.keys(), 1):
+                print(f"{i}. {s}")
+
+            try:
+                s_index = int(input("Select state number: ")) - 1
+                state_name = list(states.keys())[s_index]
+            except (ValueError, IndexError):
+                print("Invalid state selection!")
+                continue
+
+            city = input("Enter City name: ").strip()
+
+            if city in states[state_name]:
+                print("City already exists in this state!")
+            else:
+                states[state_name].append(city)
+                print(f"{city} added to {state_name}, {country_name}!")
+
+            another = input("Add another city? (y/n): ").lower()
             if another != 'y':
                 break
 
+    # ---------------- EXIT ----------------
     elif choice == '4':
         break
+
     else:
         print("Invalid choice!")
 
-# Write to CSV with grouped structure
+# ---------------- WRITE TO CSV ----------------
 with open(filename, 'w', newline='') as file:
     writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
 
-    last_country = last_state = ''
-    for row in data:
-        country_to_write = row['Country'] if row['Country'] != last_country and row['Country'] != '' else ''
-        state_to_write = row['State'] if row['State'] != last_state and row['State'] != '' else ''
-        writer.writerow({
-            'Country': country_to_write,
-            'State': state_to_write,
-            'City': row['City']
-        })
-        if row['Country'] != '':
-            last_country = row['Country']
-        if row['State'] != '':
-            last_state = row['State']
+    for country, c_data in countries.items():
+        writer.writerow({'Country': country, 'State': '', 'City': ''})
+
+        for state, cities in c_data["states"].items():
+            writer.writerow({'Country': '', 'State': state, 'City': ''})
+
+            for city in cities:
+                writer.writerow({'Country': '', 'State': '', 'City': city})
 
 print(f"\n{filename} created successfully!")
