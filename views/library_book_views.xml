@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <!-- Tree (List) View -->
+    <!-- Action for Library Books -->
+    <record id="action_library_books" model="ir.actions.act_window">
+        <field name="name">Books</field>
+        <field name="res_model">library.book</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p>
+                Manage library books here.
+            </p>
+        </field>
+    </record>
+
+    <!-- Tree View -->
     <record id="view_library_book_tree" model="ir.ui.view">
         <field name="name">library.book.tree</field>
         <field name="model">library.book</field>
@@ -14,12 +26,12 @@
         </field>
     </record>
 
-    <!-- Form View with Tabs -->
+    <!-- Form View -->
     <record id="view_library_book_form" model="ir.ui.view">
         <field name="name">library.book.form</field>
         <field name="model">library.book</field>
         <field name="arch" type="xml">
-            <form>
+            <form string="Book">
                 <sheet>
                     <group>
                         <field name="name"/>
@@ -27,8 +39,8 @@
                         <field name="publication_date"/>
                         <field name="price"/>
                         <field name="pages"/>
+                        <field name="image_1920" widget="image"/>
                         <field name="category_id"/>
-                        <field name="image_1920"/>
                     </group>
                     <notebook>
                         <page string="Description">
@@ -40,14 +52,15 @@
         </field>
     </record>
 
-    <!-- Action -->
-    <record id="action_library_book" model="ir.actions.act_window">
-        <field name="name">Books</field>
-        <field name="res_model">library.book</field>
-        <field name="view_mode">tree,form</field>
+    <!-- Search View -->
+    <record id="view_library_book_search" model="ir.ui.view">
+        <field name="name">library.book.search</field>
+        <field name="model">library.book</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Book Title"/>
+                <field name="isbn" string="ISBN"/>
+            </search>
+        </field>
     </record>
-
-    <!-- Menu -->
-    <menuitem id="menu_library_root" name="Library Management"/>
-    <menuitem id="menu_library_books" name="Books" parent="menu_library_root" action="action_library_book"/>
 </odoo>
