@@ -1,43 +1,47 @@
 <odoo>
 
-    <!-- Tree View -->
+    <!-- Tree view: list of all books -->
     <record id="view_library_book_tree" model="ir.ui.view">
-        <field name="name">library.book.tree</field>
-        <field name="model">library.book</field>
+        <field name="name">library.book.tree</field> <!-- view technical name -->
+        <field name="model">library.book</field> <!-- linked model -->
         <field name="arch" type="xml">
             <tree string="Books">
-                <field name="name"/>
-                <field name="isbn"/>
-                <field name="price"/>
-                <field name="pages"/>
+                <field name="name"/>   <!-- book title -->
+                <field name="isbn"/>   <!-- ISBN number -->
+                <field name="price"/>  <!-- book price -->
+                <field name="pages"/>  <!-- number of pages -->
             </tree>
         </field>
     </record>
 
-    <!-- Form View -->
+    <!-- Form view: create/edit book -->
     <record id="view_library_book_form" model="ir.ui.view">
-        <field name="name">library.book.form</field>
-        <field name="model">library.book</field>
+        <field name="name">library.book.form</field> <!-- view technical name -->
+        <field name="model">library.book</field> <!-- linked model -->
         <field name="arch" type="xml">
             <form string="Book Details">
                 <sheet>
                     <group>
+                        <!-- Left section -->
                         <group>
-                            <field name="name"/>
-                            <field name="isbn"/>
-                            <field name="publication_date"/>
-                            <field name="category_id"/>
+                            <field name="name"/>              <!-- book title -->
+                            <field name="isbn"/>              <!-- ISBN -->
+                            <field name="publication_date"/>  <!-- publish date -->
+                            <field name="category_id"/>       <!-- book category -->
                         </group>
+
+                        <!-- Right section -->
                         <group>
-                            <field name="price"/>
-                            <field name="pages"/>
-                            <field name="image_1920" widget="image"/>
+                            <field name="price"/>             <!-- price -->
+                            <field name="pages"/>             <!-- pages -->
+                            <field name="image_1920" widget="image"/> <!-- book image -->
                         </group>
                     </group>
 
+                    <!-- Extra details in tabs -->
                     <notebook>
                         <page string="Description">
-                            <field name="description"/>
+                            <field name="description"/> <!-- book summary -->
                         </page>
                     </notebook>
                 </sheet>
@@ -45,24 +49,24 @@
         </field>
     </record>
 
-    <!-- Search View -->
+    <!-- Search view: filter books -->
     <record id="view_library_book_search" model="ir.ui.view">
-        <field name="name">library.book.search</field>
-        <field name="model">library.book</field>
+        <field name="name">library.book.search</field> <!-- search view name -->
+        <field name="model">library.book</field> <!-- linked model -->
         <field name="arch" type="xml">
             <search string="Search Books">
-                <field name="name"/>
-                <field name="isbn"/>
+                <field name="name"/> <!-- search by title -->
+                <field name="isbn"/> <!-- search by ISBN -->
             </search>
         </field>
     </record>
 
-    <!-- Action -->
+    <!-- Action: opens book views -->
     <record id="action_library_book" model="ir.actions.act_window">
-        <field name="name">Books</field>
-        <field name="res_model">library.book</field>
-        <field name="view_mode">tree,form</field>
-        <field name="search_view_id" ref="view_library_book_search"/>
+        <field name="name">Books</field> <!-- menu/action label -->
+        <field name="res_model">library.book</field> <!-- model to open -->
+        <field name="view_mode">tree,form</field> <!-- list then form -->
+        <field name="search_view_id" ref="view_library_book_search"/> <!-- search bar -->
     </record>
 
 </odoo>
