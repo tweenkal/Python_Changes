@@ -1,20 +1,22 @@
 <odoo>
 
-    <!-- Main Menu -->
-    <menuitem id="menu_library_root" name="Library Management" sequence="10"/>
+    <!-- Main menu for Library module -->
+    <menuitem id="menu_library_root"
+              name="Library Management"
+              sequence="10"/>
 
-    <!-- Books Menu -->
+    <!-- Menu to open Books screen -->
     <menuitem id="menu_library_book"
               name="Books"
-              parent="menu_library_root"
-              action="action_library_book"
+              parent="menu_library_root"      <!-- appears under Library Management -->
+              action="action_library_book"   <!-- opens book views -->
               sequence="1"/>
 
-    <!-- Category Menu -->
+    <!-- Menu to open Categories screen -->
     <menuitem id="menu_library_category"
               name="Categories"
-              parent="menu_library_root"
-              action="action_book_category"
+              parent="menu_library_root"     <!-- appears under Library Management -->
+              action="action_book_category"  <!-- opens category views -->
               sequence="2"/>
 
 </odoo>
