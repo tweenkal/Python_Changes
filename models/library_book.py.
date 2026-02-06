@@ -1,6 +1,24 @@
 from odoo import models, fields
 
 class LibraryBook(models.Model):
+     """
+    Library Book Model
+
+    This model represents books available in the library.
+    It stores bibliographic details such as title, ISBN,
+    publication date, price, number of pages, and category.
+
+    Fields:
+        name (Char): Title of the book.
+        isbn (Char): ISBN number of the book.
+        publication_date (Date): Date when the book was published.
+        price (Float): Price of the book.
+        pages (Integer): Total number of pages.
+        description (Html): Short summary or description of the book.
+        image_1920 (Image): Cover image of the book.
+        category_id (Many2one): Category to which the book belongs.
+    """
+
     _name = 'library.book'
     _description = 'Library Book'
 
