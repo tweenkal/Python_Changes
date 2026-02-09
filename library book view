@@ -1,0 +1,5 @@
+<!-- Book Form View -->
+<group>
+    <field name="total_books" readonly="1"/>
+    <field name="total_sales_amout" readonly="1"/>
+</group>
