@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+"""
+Library Book Model
+Handles book details and computed sales data
+"""
+
+from odoo import models, fields, api
+
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(string='Book Title', required=True)
+    isbn = fields.Char(string='ISBN')
+    publication_date = fields.Date(string='Publication Date')
+    price = fields.Float(string='Price')
+    pages = fields.Integer(string='Pages')
+    description = fields.Html(string='Description')
+    image_1920 = fields.Image(string='Book Image')
+
+    category_id = fields.Many2one(
+        'book.category',
+        string='Book Category'
+    )
+
+    edition_ids = fields.Many2many(
+        'book.edition',
+        string='Editions'
+    )
+
+    # Computed Fields
+    total_books = fields.Integer(
+        string='Total Books',
+        compute='_compute_total_books',
+        store=True
+    )
+
+    total_sales_amout = fields.Float(
+        string='Total Sales Amount',
+        compute='_compute_total_books',
+        store=True
+    )
+
+    @api.depends('edition_ids.quantity', 'edition_ids.book_price')
+    def _compute_total_books(self):
+        """
+        Computes total quantity and total sales amount
+        based on selected editions
+        """
+        for book in self:
+            total_qty = 0
+            total_amount = 0.0
+
+            for edition in book.edition_ids:
+                total_qty += edition.quantity
+                total_amount += edition.quantity * edition.book_price
+
+            book.total_books = total_qty
+            book.total_sales_amout = total_amount
+
