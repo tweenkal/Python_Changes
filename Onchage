@@ -1,0 +1,27 @@
+from odoo import models, fields, api
+
+class AuthorBook(models.Model):
+    _name = 'author.book'
+    _description = 'Author Book'
+
+    author_id = fields.Many2one(
+        'author.author',
+        string="Author"
+    )
+
+    book_id = fields.Many2one(
+        'library.book',
+        string="Book",
+        required=True
+    )
+
+    isbn = fields.Char(string="ISBN")
+    publication_date = fields.Date(string="Publication Date")
+    price = fields.Float(string="Price")
+
+    @api.onchange('book_id')
+    def _onchange_book_id(self):
+        if self.book_id:
+            self.isbn = self.book_id.isbn
+            self.publication_date = self.book_id.publication_date
+            self.price = self.book_id.price
