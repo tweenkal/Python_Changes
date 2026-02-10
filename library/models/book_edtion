@@ -1,8 +1,0 @@
-from odoo import models, fields
-
-class BookEdition(models.Model):
-    _name = 'book.edition'
-    _description = 'Book Edition'
-
-    name = fields.Char(string="Edition", required=True)
-    active = fields.Boolean(default=True)

@@ -1,6 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_book_edition,book.edition,model_book_edition,,1,1,1,1
-access_book_category,book.category,model_book_category,,1,1,1,1
-access_library_book,library.book,model_library_book,,1,1,1,1
-access_author_author,author.author,model_author_author,,1,1,1,1
-access_author_book,author.book,model_author_book,,1,1,1,1
