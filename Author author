@@ -1,0 +1,23 @@
+from odoo import models, fields
+
+class AuthorAuthor(models.Model):
+    _name = 'author.author'
+    _description = 'Author'
+
+    name = fields.Char(string="Author Name", required=True)
+    dob_date = fields.Date(string="Date of Birth")
+    gender = fields.Selection([
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ])
+    nationality = fields.Char(string="Nationality")
+    email = fields.Char(string="Email")
+    phone = fields.Char(string="Phone")
+    social_profile = fields.Char(string="Social Profile")
+
+    book_ids = fields.One2many(
+        'author.book',
+        'book_id',
+        string="Books"
+    )
