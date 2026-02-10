@@ -1,0 +1,58 @@
+<odoo>
+    <record id="view_library_book_tree" model="ir.ui.view">
+        <field name="name">library.book.tree</field>
+        <field name="model">library.book</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="isbn"/>
+                <field name="price"/>
+                <field name="pages"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_library_book_form" model="ir.ui.view">
+        <field name="name">library.book.form</field>
+        <field name="model">library.book</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="image_1920" widget="image"/>
+                        <field name="name"/>
+                        <field name="isbn"/>
+                        <field name="publication_date"/>
+                        <field name="price"/>
+                        <field name="pages"/>
+                        <field name="category_id"/>
+                        <field name="edition_ids" widget="many2many_tags"/>
+                    </group>
+
+                    <notebook>
+                        <page string="Description">
+                            <field name="description"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_library_book_search" model="ir.ui.view">
+        <field name="name">library.book.search</field>
+        <field name="model">library.book</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="isbn"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_library_books" model="ir.actions.act_window">
+        <field name="name">Books</field>
+        <field name="res_model">library.book</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+</odoo>
