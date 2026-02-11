@@ -1,0 +1,99 @@
+from odoo import models, fields, api
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(string="Book Title", required=True)
+    isbn = fields.Char(string="ISBN Number")
+    publication_date = fields.Date(string="Publication Date")
+    price = fields.Float(string="Price")
+    pages = fields.Integer(string="Pages")
+    description = fields.Html(string="Description")
+    image_1920 = fields.Image(string="Book Image")
+
+    # RELATIONAL FIELDS
+    category_id = fields.Many2one(
+        'book.category',
+        string="Category"
+    )
+
+    edition_ids = fields.Many2many(
+        'book.edition',
+        string="Editions"
+    )
+
+    author_id = fields.Many2one(
+        'author.author',
+        string="Author"
+    )
+
+    # COMPUTE FIELDS (Assignment 3)
+    total_books = fields.Integer(
+        string="Total Books",
+        compute="_compute_totals",
+        store=True
+    )
+
+    total_sales_amount = fields.Float(
+        string="Expected Sales Amount",
+        compute="_compute_totals",
+        store=True
+    )
+
+    @api.depends('edition_ids.quantity', 'edition_ids.book_price')
+    def _compute_totals(self):
+        for record in self:
+            total_qty = 0
+            total_amount = 0
+
+            for edition in record.edition_ids:
+                total_qty += edition.quantity
+                total_amount += edition.quantity * edition.book_price
+
+            record.total_books = total_qty
+            record.total_sales_amount = total_amount
+
+    # ASSIGNMENT 4 - ORM COMMAND WORKFLOW
+    @api.depends('author_id', 'isbn', 'publication_date', 'price')
+    def _compute_author_books(self):
+        for record in self:
+            AuthorBook = self.env['author.book']
+
+            existing = AuthorBook.search([
+                ('book_id', '=', record.id)
+            ])
+
+            # If author removed → delete record
+            if not record.author_id:
+                if existing:
+                    existing.unlink()
+                continue
+
+            if existing:
+                existing.write({
+                    'author_id': record.author_id.id,
+                    'isbn': record.isbn,
+                    'publication_date': record.publication_date,
+                    'price': record.price,
+                })
+            else:
+                AuthorBook.create({
+                    'author_id': record.author_id.id,
+                    'book_id': record.id,
+                    'isbn': record.isbn,
+                    'publication_date': record.publication_date,
+                    'price': record.price,
+                })
+
+    # Trigger compute manually inside create & write
+    @api.model
+    def create(self, vals):
+        record = super().create(vals)
+        record._compute_author_books()
+        return record
+
+    def write(self, vals):
+        res = super().write(vals)
+        self._compute_author_books()
+        return res
