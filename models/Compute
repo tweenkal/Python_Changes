@@ -1,0 +1,36 @@
+@api.depends('author_id', 'isbn', 'publication_date', 'price')
+def _compute_author_book(self):
+    for book in self:
+        # CASE 1: Author removed
+        if not book.author_id:
+            if book.author_book_id:
+                book.author_id.book_ids = [(2, book.author_book_id.id)]
+                book.author_book_id = False
+            continue
+
+        values = {
+            'book_id': book.id,
+            'isbn': book.isbn,
+            'publication_date': book.publication_date,
+            'price': book.price,
+        }
+
+        # CASE 2: Author changed
+        if book.author_book_id and book.author_book_id.author_id != book.author_id:
+            book.author_book_id.author_id.book_ids = [
+                (2, book.author_book_id.id)
+            ]
+            book.author_book_id = False
+
+        # CASE 3: Create new author.book
+        if not book.author_book_id:
+            book.author_id.book_ids = [(0, 0, values)]
+            book.author_book_id = book.author_id.book_ids.filtered(
+                lambda b: b.book_id == book
+            )
+
+        # CASE 4: Update existing author.book
+        else:
+            book.author_id.book_ids = [
+                (1, book.author_book_id.id, values)
+            ]
