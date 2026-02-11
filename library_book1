@@ -5,95 +5,79 @@ class LibraryBook(models.Model):
     _description = 'Library Book'
 
     name = fields.Char(string="Book Title", required=True)
-    isbn = fields.Char(string="ISBN Number")
+    isbn = fields.Char(string="ISBN")
     publication_date = fields.Date(string="Publication Date")
     price = fields.Float(string="Price")
-    pages = fields.Integer(string="Pages")
-    description = fields.Html(string="Description")
-    image_1920 = fields.Image(string="Book Image")
 
-    # RELATIONAL FIELDS
-    category_id = fields.Many2one(
-        'book.category',
-        string="Category"
-    )
-
-    edition_ids = fields.Many2many(
-        'book.edition',
-        string="Editions"
-    )
-
+    # NEW FIELD
     author_id = fields.Many2one(
         'author.author',
         string="Author"
     )
 
-    # COMPUTE FIELDS (Assignment 3)
-    total_books = fields.Integer(
-        string="Total Books",
-        compute="_compute_totals",
-        store=True
+    # COMPUTE FIELD (Hidden field only to trigger compute)
+    sync_author_book = fields.Boolean(
+        compute="_compute_sync_author_book",
+        store=False
     )
 
-    total_sales_amount = fields.Float(
-        string="Expected Sales Amount",
-        compute="_compute_totals",
-        store=True
-    )
+    # --------------------------------------------------
+    # ASSIGNMENT 4 CORE LOGIC
+    # --------------------------------------------------
 
-    @api.depends('edition_ids.quantity', 'edition_ids.book_price')
-    def _compute_totals(self):
-        for record in self:
-            total_qty = 0
-            total_amount = 0
-
-            for edition in record.edition_ids:
-                total_qty += edition.quantity
-                total_amount += edition.quantity * edition.book_price
-
-            record.total_books = total_qty
-            record.total_sales_amount = total_amount
-
-    # ASSIGNMENT 4 - ORM COMMAND WORKFLOW
     @api.depends('author_id', 'isbn', 'publication_date', 'price')
-    def _compute_author_books(self):
-        for record in self:
+    def _compute_sync_author_book(self):
+        """
+        This method:
+        ✔ Creates author.book record when author selected
+        ✔ Updates record when book data changes
+        ✔ Removes record when author removed
+        ✔ Moves record when author changed
+        ✔ Uses ORM COMMANDS
+        """
+
+        for rec in self:
+
             AuthorBook = self.env['author.book']
 
-            existing = AuthorBook.search([
-                ('book_id', '=', record.id)
+            # Find existing relation record
+            existing_record = AuthorBook.search([
+                ('book_id', '=', rec.id)
             ])
 
-            # If author removed → delete record
-            if not record.author_id:
-                if existing:
-                    existing.unlink()
+            # -----------------------------
+            # CASE 1: Author Removed
+            # -----------------------------
+            if not rec.author_id:
+                if existing_record:
+                    existing_record.unlink()
                 continue
 
-            if existing:
-                existing.write({
-                    'author_id': record.author_id.id,
-                    'isbn': record.isbn,
-                    'publication_date': record.publication_date,
-                    'price': record.price,
-                })
+            values = {
+                'book_id': rec.id,
+                'isbn': rec.isbn,
+                'publication_date': rec.publication_date,
+                'price': rec.price,
+                'author_id': rec.author_id.id,
+            }
+
+            # -----------------------------
+            # CASE 2: Record Exists → Update
+            # -----------------------------
+            if existing_record:
+                # If author changed
+                if existing_record.author_id != rec.author_id:
+                    existing_record.unlink()
+                    rec.author_id.write({
+                        'book_ids': [(0, 0, values)]
+                    })
+                else:
+                    existing_record.write(values)
+
+            # -----------------------------
+            # CASE 3: No Record → Create
+            # -----------------------------
             else:
-                AuthorBook.create({
-                    'author_id': record.author_id.id,
-                    'book_id': record.id,
-                    'isbn': record.isbn,
-                    'publication_date': record.publication_date,
-                    'price': record.price,
+                rec.author_id.write({
+                    'book_ids': [(0, 0, values)]
                 })
-
-    # Trigger compute manually inside create & write
-    @api.model
-    def create(self, vals):
-        record = super().create(vals)
-        record._compute_author_books()
-        return record
-
-    def write(self, vals):
-        res = super().write(vals)
-        self._compute_author_books()
-        return res
