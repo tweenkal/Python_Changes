@@ -1,0 +1,70 @@
+from odoo import api, fields, models
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(required=True)
+    isbn = fields.Char()
+    publication_date = fields.Date()
+    price = fields.Float()
+
+    author_id = fields.Many2one(
+        'author.author',
+        string="Author"
+    )
+
+    author_book_id = fields.Many2one(
+        'author.book',
+        string="Author Book Link",
+        copy=False
+    )
+
+    @api.depends('author_id', 'isbn', 'publication_date', 'price')
+    def _compute_author_book_link(self):
+        for record in self:
+
+            # CASE 1: Author removed
+            if not record.author_id:
+                if record.author_book_id:
+                    record.author_book_id.unlink()
+                    record.author_book_id = False
+                continue
+
+            values = {
+                'name': record.name,
+                'isbn': record.isbn,
+                'publication_date': record.publication_date,
+                'price': record.price,
+                'library_book_id': record.id,
+            }
+
+            # CASE 2: Author changed
+            if record.author_book_id:
+                if record.author_book_id.author_id != record.author_id:
+                    record.author_book_id.unlink()
+                    record.author_book_id = False
+
+            # CASE 3: Create new relation
+            if not record.author_book_id:
+                new_author_book = record.author_id.write({
+                    'book_ids': [(0, 0, values)]
+                })
+                # Fetch newly created record
+                author_book = self.env['author.book'].search([
+                    ('library_book_id', '=', record.id),
+                    ('author_id', '=', record.author_id.id)
+                ], limit=1)
+                record.author_book_id = author_book.id
+
+            # CASE 4: Update existing
+            else:
+                record.author_id.write({
+                    'book_ids': [(1, record.author_book_id.id, values)]
+                })
+
+    # Make compute stored to ensure automatic trigger
+    author_book_sync = fields.Boolean(
+        compute="_compute_author_book_link",
+        store=True
+    )
