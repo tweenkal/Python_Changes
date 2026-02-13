@@ -1,0 +1,32 @@
+from odoo import models, fields, api
+
+class Book(models.Model):
+    _inherit = 'library.book'
+
+    author_id = fields.Many2one('author.author', string='Author')
+
+    @api.depends('author_id', 'isbn', 'publication_date', 'price')
+    def _compute_author_book(self):
+        AuthorBook = self.env['author.book']
+        for book in self:
+            # Check if author is set
+            if book.author_id:
+                # Check if record already exists
+                ab_record = AuthorBook.search([('name', '=', book.name), ('author_id', '=', book.author_id.id)], limit=1)
+                vals = {
+                    'name': book.name,
+                    'author_id': book.author_id.id,
+                    'isbn': book.isbn,
+                    'publication_date': book.publication_date,
+                    'price': book.price,
+                }
+                if ab_record:
+                    ab_record.write(vals)  # Update existing record
+                else:
+                    AuthorBook.create(vals)  # Create new record
+            else:
+                # Remove any existing record if author is removed
+                ab_record = AuthorBook.search([('name', '=', book.name)], limit=1)
+                if ab_record:
+                    ab_record.unlink()
+                    
