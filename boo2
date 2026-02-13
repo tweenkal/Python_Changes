@@ -1,0 +1,73 @@
+from odoo import api, fields, models
+
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(string='Book Title', required=True)
+    isbn = fields.Char(string='ISBN Number')
+    publication_date = fields.Date(string='Date of publication')
+    price = fields.Float(string='Book Price')
+
+    author_id = fields.Many2one(
+        'author.author',
+        string="Book Author"
+    )
+
+    # This field exists only to trigger compute
+    sync_trigger = fields.Boolean(
+        compute="_compute_author_book_sync",
+        store=True
+    )
+
+    # ======================================
+    # MANDATORY COMPUTE METHOD
+    # ======================================
+
+    @api.depends('author_id', 'isbn', 'publication_date', 'price')
+    def _compute_author_book_sync(self):
+
+        for rec in self:
+
+            if not rec.id:
+                continue
+
+            AuthorBook = self.env['author.book']
+
+            # Check existing record
+            existing = AuthorBook.search([
+                ('book_id', '=', rec.id)
+            ], limit=1)
+
+            # ===============================
+            # CASE 1 → Author Removed
+            # ===============================
+            if not rec.author_id:
+                if existing:
+                    existing.unlink()
+                continue
+
+            vals = {
+                'book_id': rec.id,
+                'author_id': rec.author_id.id,
+                'isbn': rec.isbn,
+                'publication_date': rec.publication_date,
+                'price': rec.price,
+            }
+
+            # ===============================
+            # CASE 2 → Update Existing
+            # ===============================
+            if existing:
+                rec.author_id.write({
+                    'book_ids': [(1, existing.id, vals)]
+                })
+
+            # ===============================
+            # CASE 3 → Create New
+            # ===============================
+            else:
+                rec.author_id.write({
+                    'book_ids': [(0, 0, vals)]
+                })
