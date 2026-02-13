@@ -1,0 +1,113 @@
+# models/library_book.py
+from odoo import models, fields, api
+from odoo.fields import Command
+
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(required=True)
+    isbn = fields.Char()
+    publication_date = fields.Date()
+    price = fields.Float()
+
+    author_id = fields.Many2one(
+        'author.author',
+        string="Book Author",
+        ondelete='set null'
+    )
+
+    # Technical field to track generated author.book record
+    author_book_line_id = fields.Many2one(
+        'author.book',
+        string="Author Book Line",
+        readonly=True
+    )
+
+    @api.depends('author_id', 'isbn', 'publication_date', 'price')
+    def _compute_author_book_link(self):
+        """
+        Manage author.book records using ORM COMMANDS.
+        Triggered when:
+            - author_id changes
+            - isbn changes
+            - publication_date changes
+            - price changes
+        """
+        for book in self:
+            # CASE 1: No author selected → remove existing relation
+            if not book.author_id:
+                if book.author_book_line_id:
+                    book.author_book_line_id.unlink()
+                    book.author_book_line_id = False
+                continue
+
+            # CASE 2: Author exists but relation not yet created
+            if not book.author_book_line_id:
+                commands = [
+                    Command.create({
+                        'library_book_id': book.id,
+                        'isbn': book.isbn,
+                        'publication_date': book.publication_date,
+                        'price': book.price,
+                    })
+                ]
+
+                book.author_id.write({
+                    'book_ids': commands
+                })
+
+                # fetch newly created record
+                created_line = self.env['author.book'].search([
+                    ('library_book_id', '=', book.id),
+                    ('author_id', '=', book.author_id.id)
+                ], limit=1)
+
+                book.author_book_line_id = created_line
+
+            else:
+                # CASE 3: Author changed
+                if book.author_book_line_id.author_id != book.author_id:
+                    old_line = book.author_book_line_id
+                    old_line.unlink()
+
+                    commands = [
+                        Command.create({
+                            'library_book_id': book.id,
+                            'isbn': book.isbn,
+                            'publication_date': book.publication_date,
+                            'price': book.price,
+                        })
+                    ]
+
+                    book.author_id.write({
+                        'book_ids': commands
+                    })
+
+                    new_line = self.env['author.book'].search([
+                        ('library_book_id', '=', book.id),
+                        ('author_id', '=', book.author_id.id)
+                    ], limit=1)
+
+                    book.author_book_line_id = new_line
+
+                else:
+                    # CASE 4: Update existing line when book data changes
+                    book.author_book_line_id.write({
+                        'isbn': book.isbn,
+                        'publication_date': book.publication_date,
+                        'price': book.price,
+                    })
+
+    # Hook compute to write/create
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._compute_author_book_link()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        self._compute_author_book_link()
+        return res
