@@ -1,0 +1,66 @@
+from odoo import models, fields, api
+from odoo.models import Command
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(string="Book Title", required=True)
+    isbn = fields.Char(string="ISBN Number")
+    publication_date = fields.Date(string="Publication Date")
+    price = fields.Float(string="Price")
+    pages = fields.Integer(string="Pages")
+    description = fields.Html(string="Description")
+    image_1920 = fields.Image(string="Book Image")
+
+    category_id = fields.Many2one('book.category', string="Category")
+    edition_ids = fields.Many2many('book.edition', string="Editions")
+    total_books = fields.Integer(string="Total Books", compute="_compute_totals")
+    total_sales_amount = fields.Float(string="Total Sales Amount", compute="_compute_totals")
+
+    author_id = fields.Many2one('author.author', string="Author")
+
+    @api.depends('edition_ids')
+    def _compute_totals(self):
+        for book in self:
+            book.total_books = sum(e.quantity for e in book.edition_ids)
+            book.total_sales_amount = sum(e.quantity * e.book_price for e in book.edition_ids)
+
+    @api.depends('author_id', 'isbn', 'publication_date', 'price')
+    def _compute_author_book(self):
+        """Automatically manage author.book using Command.create/update/unlink"""
+        AuthorBook = self.env['author.book']
+        for book in self:
+            if book.author_id:
+                author = book.author_id
+                commands = []
+
+                # Remove old author.book linked to other authors
+                old_books = AuthorBook.search([('book_id','=',book.id), ('author_id','!=',author.id)])
+                for ob in old_books:
+                    commands.append(Command.unlink(ob.id))
+
+                # Update existing record or create new
+                existing = AuthorBook.search([('book_id','=',book.id), ('author_id','=',author.id)])
+                if existing:
+                    commands.append(Command.update(existing.id, {
+                        'isbn': book.isbn,
+                        'publication_date': book.publication_date,
+                        'price': book.price,
+                    }))
+                else:
+                    commands.append(Command.create({
+                        'book_id': book.id,
+                        'isbn': book.isbn,
+                        'publication_date': book.publication_date,
+                        'price': book.price,
+                    }))
+
+                # Apply commands to the One2many field
+                author.write({'book_ids': commands})
+
+            else:
+                # Author removed: unlink all author.book for this book
+                old_books = AuthorBook.search([('book_id','=',book.id)])
+                for ob in old_books:
+                    ob.author_id.write({'book_ids': [Command.unlink(ob.id)]})
