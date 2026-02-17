@@ -1,0 +1,39 @@
+<odoo>
+
+    <!-- Author Action -->
+    <record id="ak_library_management.action_author" model="ir.actions.act_window">
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_author_tree_primary')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_author_form_primary')})
+        ]"/>
+    </record>
+
+    <!-- Book Action -->
+    <record id="ak_library_management.action_book" model="ir.actions.act_window">
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_book_tree_primary')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_book_form_primary')})
+        ]"/>
+    </record>
+
+    <!-- Category Action -->
+    <record id="ak_library_management.action_book_category" model="ir.actions.act_window">
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_category_tree_primary')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_category_form_primary')})
+        ]"/>
+    </record>
+
+    <!-- Edition Action -->
+    <record id="ak_library_management.action_book_edition" model="ir.actions.act_window">
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('view_edition_tree_primary')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('view_edition_form_primary')})
+        ]"/>
+    </record>
+
+</odoo>
