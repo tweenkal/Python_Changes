@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- ===================================
+         BOOK ACTION (TREE DEFAULT VIEW)
+    ==================================== -->
+    <record id="action_library_book" model="ir.actions.act_window">
+        <field name="view_mode">tree,form</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {
+                'view_mode': 'tree',
+                'view_id': ref('ak_library_management.view_library_book_tree')
+            }),
+            (0, 0, {
+                'view_mode': 'form',
+                'view_id': ref('ak_library_management.view_library_book_form')
+            })
+        ]"/>
+    </record>
+
+
+
+    <!-- ===================================
+         AUTHOR ACTION (TREE DEFAULT VIEW)
+    ==================================== -->
+    <record id="action_author" model="ir.actions.act_window">
+        <field name="view_mode">tree,form</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {
+                'view_mode': 'tree',
+                'view_id': ref('ak_library_management.view_author_tree')
+            }),
+            (0, 0, {
+                'view_mode': 'form',
+                'view_id': ref('ak_library_management.view_author_form')
+            })
+        ]"/>
+    </record>
+
+
+
+    <!-- ===================================
+         CATEGORY ACTION
+    ==================================== -->
+    <record id="action_book_category" model="ir.actions.act_window">
+        <field name="view_mode">tree,form</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {
+                'view_mode': 'tree',
+                'view_id': ref('ak_library_management.view_book_category_tree')
+            }),
+            (0, 0, {
+                'view_mode': 'form',
+                'view_id': ref('ak_library_management.view_book_category_form')
+            })
+        ]"/>
+    </record>
+
+
+
+    <!-- ===================================
+         EDITION ACTION
+    ==================================== -->
+    <record id="action_book_edition" model="ir.actions.act_window">
+        <field name="view_mode">tree,form</field>
+        <field name="view_ids" eval="[
+            (5, 0, 0),
+            (0, 0, {
+                'view_mode': 'tree',
+                'view_id': ref('ak_library_management.view_book_edition_tree')
+            }),
+            (0, 0, {
+                'view_mode': 'form',
+                'view_id': ref('ak_library_management.view_book_edition_form')
+            })
+        ]"/>
+    </record>
+
+</odoo>
