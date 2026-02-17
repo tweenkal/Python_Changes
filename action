@@ -1,82 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
 
-    <!-- ===================================
-         BOOK ACTION (TREE DEFAULT VIEW)
-    ==================================== -->
-    <record id="action_library_book" model="ir.actions.act_window">
-        <field name="view_mode">tree,form</field>
-        <field name="view_ids" eval="[
-            (5, 0, 0),
-            (0, 0, {
-                'view_mode': 'tree',
-                'view_id': ref('ak_library_management.view_library_book_tree')
-            }),
-            (0, 0, {
-                'view_mode': 'form',
-                'view_id': ref('ak_library_management.view_library_book_form')
-            })
-        ]"/>
+    <!-- ===================================================== -->
+    <!--                    AUTHOR VIEWS                       -->
+    <!-- ===================================================== -->
+
+    <!-- Author Tree -->
+    <record id="view_author_tree_primary" model="ir.ui.view">
+        <field name="name">ak.author.tree.primary</field>
+        <field name="model">ak.author</field>
+        <field name="inherit_id" ref="ak_library_management.view_author_tree"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
+    </record>
+
+    <!-- Author Form -->
+    <record id="view_author_form_primary" model="ir.ui.view">
+        <field name="name">ak.author.form.primary</field>
+        <field name="model">ak.author</field>
+        <field name="inherit_id" ref="ak_library_management.view_author_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
     </record>
 
 
+    <!-- ===================================================== -->
+    <!--                      BOOK VIEWS                       -->
+    <!-- ===================================================== -->
 
-    <!-- ===================================
-         AUTHOR ACTION (TREE DEFAULT VIEW)
-    ==================================== -->
-    <record id="action_author" model="ir.actions.act_window">
-        <field name="view_mode">tree,form</field>
-        <field name="view_ids" eval="[
-            (5, 0, 0),
-            (0, 0, {
-                'view_mode': 'tree',
-                'view_id': ref('ak_library_management.view_author_tree')
-            }),
-            (0, 0, {
-                'view_mode': 'form',
-                'view_id': ref('ak_library_management.view_author_form')
-            })
-        ]"/>
+    <!-- Book Tree -->
+    <record id="view_book_tree_primary" model="ir.ui.view">
+        <field name="name">ak.book.tree.primary</field>
+        <field name="model">ak.book</field>
+        <field name="inherit_id" ref="ak_library_management.view_book_tree"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
+    </record>
+
+    <!-- Book Form -->
+    <record id="view_book_form_primary" model="ir.ui.view">
+        <field name="name">ak.book.form.primary</field>
+        <field name="model">ak.book</field>
+        <field name="inherit_id" ref="ak_library_management.view_book_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
     </record>
 
 
+    <!-- ===================================================== -->
+    <!--                  CATEGORY VIEWS                       -->
+    <!-- ===================================================== -->
 
-    <!-- ===================================
-         CATEGORY ACTION
-    ==================================== -->
-    <record id="action_book_category" model="ir.actions.act_window">
-        <field name="view_mode">tree,form</field>
-        <field name="view_ids" eval="[
-            (5, 0, 0),
-            (0, 0, {
-                'view_mode': 'tree',
-                'view_id': ref('ak_library_management.view_book_category_tree')
-            }),
-            (0, 0, {
-                'view_mode': 'form',
-                'view_id': ref('ak_library_management.view_book_category_form')
-            })
-        ]"/>
+    <!-- Category Tree -->
+    <record id="view_category_tree_primary" model="ir.ui.view">
+        <field name="name">ak.category.tree.primary</field>
+        <field name="model">ak.book.category</field>
+        <field name="inherit_id" ref="ak_library_management.view_book_category_tree"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
+    </record>
+
+    <!-- Category Form -->
+    <record id="view_category_form_primary" model="ir.ui.view">
+        <field name="name">ak.category.form.primary</field>
+        <field name="model">ak.book.category</field>
+        <field name="inherit_id" ref="ak_library_management.view_book_category_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
     </record>
 
 
+    <!-- ===================================================== -->
+    <!--                  EDITION VIEWS                        -->
+    <!-- ===================================================== -->
 
-    <!-- ===================================
-         EDITION ACTION
-    ==================================== -->
-    <record id="action_book_edition" model="ir.actions.act_window">
-        <field name="view_mode">tree,form</field>
-        <field name="view_ids" eval="[
-            (5, 0, 0),
-            (0, 0, {
-                'view_mode': 'tree',
-                'view_id': ref('ak_library_management.view_book_edition_tree')
-            }),
-            (0, 0, {
-                'view_mode': 'form',
-                'view_id': ref('ak_library_management.view_book_edition_form')
-            })
-        ]"/>
+    <!-- Edition Tree -->
+    <record id="view_edition_tree_primary" model="ir.ui.view">
+        <field name="name">ak.edition.tree.primary</field>
+        <field name="model">ak.book.edition</field>
+        <field name="inherit_id" ref="ak_library_management.view_book_edition_tree"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
+    </record>
+
+    <!-- Edition Form -->
+    <record id="view_edition_form_primary" model="ir.ui.view">
+        <field name="name">ak.edition.form.primary</field>
+        <field name="model">ak.book.edition</field>
+        <field name="inherit_id" ref="ak_library_management.view_book_edition_form"/>
+        <field name="mode">primary</field>
+        <field name="arch" type="xml"/>
     </record>
 
 </odoo>
