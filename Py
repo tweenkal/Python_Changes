@@ -1,0 +1,33 @@
+from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
+
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    sequence = fields.Char(
+        string="Book Reference",
+        readonly=True,
+        copy=False,
+        default='New'
+    )
+
+    name = fields.Char(string="Book Title", required=True)
+    isbn = fields.Char(string="ISBN")
+    publication_date = fields.Date(string="Publication Date")
+    price = fields.Float(string="Price")
+
+    author_id = fields.Many2one(
+        'author.author',
+        string="Author"
+    )
+
+    # -----------------------------------
+    # Override create for sequence
+    # -----------------------------------
+    @api.model
+    def create(self, vals):
+        if vals.get('sequence', 'New') == 'New':
+            vals['sequence'] = self.env['ir.sequence'].next_by_code('library.book.seq') or 'New'
+        return super(LibraryBook, self).create(vals)
