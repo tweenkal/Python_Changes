@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_partner_form_inherit_books"
+            model="ir.ui.view">
+        <field name="name">res.partner.form.inherit.books</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Add New Tab Inside Notebook -->
+            <xpath expr="//notebook" position="inside">
+
+                <page string="Books">
+
+                    <group>
+                        <field name="favorite_book_ids"
+                               widget="many2many_tags"/>
+                    </group>
+
+                    <group>
+                        <field name="recommended_book_ids"
+                               widget="many2many_tags"/>
+                    </group>
+
+                </page>
+
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
