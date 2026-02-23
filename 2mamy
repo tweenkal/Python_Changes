@@ -1,0 +1,21 @@
+from odoo import models, fields
+
+
+class ResPartner(models.Model):
+    _inherit = "res.partner"
+
+    favorite_book_ids = fields.Many2many(
+        "library.book",
+        "partner_favorite_book_rel",   # relation table name
+        "partner_id",                  # column 1
+        "book_id",                     # column 2
+        string="Favorite Books"
+    )
+
+    recommended_book_ids = fields.Many2many(
+        "library.book",
+        "partner_recommended_book_rel",  # DIFFERENT relation table
+        "partner_id",
+        "book_id",
+        string="Recommended Books"
+    )
