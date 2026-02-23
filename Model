@@ -1,0 +1,25 @@
+from odoo import models, fields
+
+
+class ResPartner(models.Model):
+    _inherit = "res.partner"
+
+    # First Many2many Field
+    favorite_book_ids = fields.Many2many(
+        comodel_name="library.book",
+        relation="partner_favorite_book_rel",
+        column1="partner_id",
+        column2="book_id",
+        string="Favorite Books",
+        help="Select books marked as favorite."
+    )
+
+    # Second Many2many Field (Same Model, Different Relation Table)
+    recommended_book_ids = fields.Many2many(
+        comodel_name="library.book",
+        relation="partner_recommended_book_rel",
+        column1="partner_id",
+        column2="book_id",
+        string="Recommended Books",
+        help="Select books recommended to this partner."
+    )
