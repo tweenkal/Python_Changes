@@ -1,0 +1,31 @@
+from odoo import models, fields, api
+
+
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(string="Book Title", required=True)
+    isbn = fields.Char(string="ISBN Number")
+    publication_date = fields.Date(string="Publication Date")
+    price = fields.Float(string="Book Price")
+    pages = fields.Integer(string="Number of Pages")
+    description = fields.Html(string="Description")
+    image_1920 = fields.Image(string="Book Image")
+
+    @api.model
+    def default_get(self, fields_list):
+        """
+        Override default_get to set:
+        - Default price = 100
+        - Default publication_date = Today
+        """
+        res = super(LibraryBook, self).default_get(fields_list)
+
+        # Set default price
+        res['price'] = 100.0
+
+        # Set today's date
+        res['publication_date'] = fields.Date.today()
+
+        return res
