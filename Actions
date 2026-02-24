@@ -1,15 +1,37 @@
-<?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
+from odoo import models, fields, api
 
-    <!-- Main sequence -->
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+
+    name = fields.Char(required=True)
+    sequence = fields.Char(
+        string="Reference",
+        default='New',
+        readonly=True,
+        copy=False
+    )
+    date = fields.Date(
+        default=fields.Date.today,
+        required=True
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('sequence', 'New') == 'New':
+                vals['sequence'] = self.env['ir.sequence'].next_by_code(
+                    'library.book.seq',
+                    sequence_date=vals.get('date')
+                )
+        return super().create(vals_list)
+
+<odoo>
     <record id="seq_library_book" model="ir.sequence">
-        <field name="name">Library Book Sequence</field>
+        <field name="name">Library Book</field>
         <field name="code">library.book.seq</field>
-        <field name="prefix">LB/%(year)s/</field>
+        <field name="prefix">LB/%(range_year)s/</field>
         <field name="padding">5</field>
-        <field name="number_next">1</field>
-        <field name="number_increment">1</field>
-        <field name="use_date_range">False</field>
+        <field name="use_date_range">True</field>
     </record>
-
 </odoo>
