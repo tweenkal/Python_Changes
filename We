@@ -1,0 +1,37 @@
+# -*- coding: utf-8 -*-
+
+from odoo import api, fields, models
+
+class LibraryBook(models.Model):
+    _inherit = 'library.book'
+
+    image_1920 = fields.Image(
+        string="Book Image",
+        help="Upload book image similar to product image"
+    )
+
+    sequence = fields.Char(
+        string="Book Reference",
+        required=True,
+        copy=False,
+        readonly=True,
+        default="New"
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('sequence', 'New') == 'New':
+
+                # Must have publication_date to control year
+                seq_date = vals.get('publication_date')
+
+                if not seq_date:
+                    seq_date = fields.Date.today()
+
+                vals['sequence'] = self.env['ir.sequence'].next_by_code(
+                    'library.book.seq',
+                    sequence_date=seq_date
+                ) or 'New'
+
+        return super().create(vals_list)
