@@ -1,0 +1,17 @@
+from odoo import api, fields, models
+
+class LibraryBook(models.Model):
+    _inherit = 'library.book'
+
+    sequence = fields.Char(
+        string="Book Reference",
+        readonly=True,
+        copy=False,
+        default="New"
+    )
+
+    @api.model
+    def create(self, vals):
+        if vals.get('sequence', 'New') == 'New':
+            vals['sequence'] = self.env['ir.sequence'].next_by_code('library.book.seq') or 'New'
+        return super().create(vals)
