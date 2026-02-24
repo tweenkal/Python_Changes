@@ -1,12 +1,16 @@
-<odoo>
+@api.model
+def default_get(self, fields_list):
+    res = super().default_get(fields_list)
 
-    <record id="seq_library_book" model="ir.sequence">
-        <field name="name">Library Book Sequence</field>
-        <field name="code">library.book.seq</field>
-        <field name="prefix">BOOK/%(year)s/</field>
-        <field name="padding">4</field>
-        <field name="number_increment">1</field>
-        <field name="use_date_range">True</field>
-    </record>
+    if 'publication_date' in fields_list:
+        res['publication_date'] = fields.Date.today()
 
-</odoo>
+    if 'price' in fields_list:
+        res['price'] = 100.0
+
+    if 'category_id' in fields_list:
+        category = self.env['book.category'].search([], limit=1)
+        if category:
+            res['category_id'] = category.id
+
+    return res
