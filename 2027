@@ -8,11 +8,13 @@ class LibraryBook(models.Model):
     sequence = fields.Char(default='New', readonly=True)
     date = fields.Date(default=fields.Date.today)
 
-    @api.model
-    def create(self, vals):
-        if vals.get('sequence', 'New') == 'New':
-            vals['sequence'] = self.env['ir.sequence'].next_by_code(
-                'library.book.seq',
-                sequence_date=vals.get('date')
-            )
-        return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('sequence', 'New') == 'New':
+                seq_date = vals.get('date') or fields.Date.today()
+                vals['sequence'] = self.env['ir.sequence'].next_by_code(
+                    'library.book.seq',
+                    sequence_date=seq_date
+                )
+        return super().create(vals_list)
