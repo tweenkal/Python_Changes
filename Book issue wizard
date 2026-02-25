@@ -1,0 +1,20 @@
+from odoo import models, fields
+
+class BookIssueWizard(models.TransientModel):
+    _name = 'book.issue.wizard'
+    _description = 'Book Issue Wizard'
+
+    book_id = fields.Many2one('library.book', string="Book", readonly=True)
+    issue_date = fields.Date(string="Issue Date")
+    return_date = fields.Date(string="Return Date")
+    issued_to = fields.Char(string="Issued To", required=True)
+
+    def action_confirm(self):
+        if self.book_id:
+            self.book_id.message_post(
+                body=f"Book issued to {self.issued_to}"
+            )
+        return {'type': 'ir.actions.act_window_close'}
+
+    def action_cancel(self):
+        return {'type': 'ir.actions.act_window_close'}
