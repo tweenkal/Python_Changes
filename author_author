@@ -1,0 +1,20 @@
+from odoo import models
+from odoo.exceptions import UserError
+
+
+class AuthorAuthor(models.Model):
+    _inherit = 'author.author'
+
+    # ============================================
+    # unlink()
+    # ============================================
+    def unlink(self):
+        for record in self:
+            related = self.env['author.book'].search([
+                ('author_id', '=', record.id)
+            ])
+            if related:
+                raise UserError(
+                    "You cannot delete this author because related books exist."
+                )
+        return super().unlink()
