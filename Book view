@@ -1,0 +1,19 @@
+<odoo>
+
+    <record id="view_library_book_form_inherit_issue" model="ir.ui.view">
+        <field name="name">library.book.form.inherit.issue</field>
+        <field name="model">library.book</field>
+        <field name="inherit_id" ref="ak_library_management.view_library_book_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//form/header" position="inside">
+                <button name="action_open_issue_wizard"
+                        string="Issue Book"
+                        type="object"
+                        class="btn-primary"/>
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
