@@ -1,0 +1,37 @@
+from odoo import models, api
+from odoo.exceptions import ValidationError
+
+
+class BookEdition(models.Model):
+    _inherit = 'book.edition'
+
+    # ============================================
+    # Validation Helper
+    # ============================================
+    def _validate_edition(self, vals):
+        for record in self:
+            quantity = vals.get('quantity', record.quantity)
+            price = vals.get('book_price', record.book_price)
+
+            if quantity <= 0:
+                raise ValidationError("Edition quantity must be greater than 0.")
+
+            if price <= 0:
+                raise ValidationError("Edition book price must be greater than 0.")
+
+    # ============================================
+    # create()
+    # ============================================
+    @api.model
+    def create(self, vals):
+        record = super().create(vals)
+        record._validate_edition(vals)
+        return record
+
+    # ============================================
+    # write()
+    # ============================================
+    def write(self, vals):
+        res = super().write(vals)
+        self._validate_edition(vals)
+        return res
