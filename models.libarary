@@ -1,0 +1,82 @@
+from odoo import models, api
+from odoo.exceptions import ValidationError
+
+
+class LibraryBook(models.Model):
+    _inherit = 'library.book'
+
+    # =====================================================
+    # 1️⃣ default_get()
+    # =====================================================
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+
+        if 'price' in fields_list and not res.get('price'):
+            res['price'] = 500
+
+        if 'pages' in fields_list and not res.get('pages'):
+            res['pages'] = 100
+
+        return res
+
+    # =====================================================
+    # Validation Helper
+    # =====================================================
+    def _validate_book(self, vals):
+        for record in self:
+            category = vals.get('category_id', record.category_id.id)
+            pages = vals.get('pages', record.pages)
+            price = vals.get('price', record.price)
+
+            if not category:
+                raise ValidationError("Category must be selected.")
+
+            if pages <= 0:
+                raise ValidationError("Pages must be greater than 0.")
+
+            if price <= 0:
+                raise ValidationError("Price must be greater than 0.")
+
+            # Check editions
+            if vals.get('edition_ids'):
+                if not vals.get('edition_ids'):
+                    raise ValidationError("At least one edition must exist.")
+            elif not record.edition_ids:
+                raise ValidationError("At least one edition must exist.")
+
+    # =====================================================
+    # 2️⃣ create()
+    # =====================================================
+    @api.model
+    def create(self, vals):
+        record = super().create(vals)
+        record._validate_book(vals)
+        return record
+
+    # =====================================================
+    # 3️⃣ write()
+    # =====================================================
+    def write(self, vals):
+        res = super().write(vals)
+        self._validate_book(vals)
+        return res
+
+    # =====================================================
+    # 4️⃣ copy()
+    # =====================================================
+    def copy(self, default=None):
+        default = dict(default or {})
+        default['name'] = f"{self.name} (Copy)"
+        return super().copy(default)
+
+    # =====================================================
+    # 5️⃣ unlink()
+    # =====================================================
+    def unlink(self):
+        for record in self:
+            author_books = self.env['author.book'].search([
+                ('book_id', '=', record.id)
+            ])
+            author_books.unlink()
+        return super().unlink()
