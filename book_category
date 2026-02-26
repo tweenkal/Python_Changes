@@ -1,42 +1,48 @@
 from odoo import models, api
 from odoo.exceptions import UserError
 
-
 class BookCategory(models.Model):
     _inherit = 'book.category'
 
-    # ============================================
-    # Loop Check
-    # ============================================
-    def _check_recursive_parent(self):
-        for record in self:
-            parent = record.parent_id
-            while parent:
-                if parent == record:
-                    raise UserError("Recursive category hierarchy is not allowed.")
-                parent = parent.parent_id
-
-    # ============================================
+    # ------------------------
     # create()
-    # ============================================
+    # ------------------------
     @api.model
     def create(self, vals):
-        record = super().create(vals)
-        record._check_recursive_parent()
+        record = super(BookCategory, self).create(vals)
+
+        if record.parent_id:
+            if record._check_loop():
+                raise UserError("Recursive category hierarchy is not allowed.")
+
         return record
 
-    # ============================================
+    # ------------------------
     # write()
-    # ============================================
+    # ------------------------
     def write(self, vals):
-        res = super().write(vals)
-        self._check_recursive_parent()
+        res = super(BookCategory, self).write(vals)
+
+        for record in self:
+            if record.parent_id and record._check_loop():
+                raise UserError("Recursive category hierarchy is not allowed.")
+
         return res
 
-    # ============================================
+    # ------------------------
     # copy()
-    # ============================================
+    # ------------------------
     def copy(self, default=None):
         default = dict(default or {})
-        default['name'] = f"{self.name} (Copy)"
-        return super().copy(default)
+        return super(BookCategory, self).copy(default)
+
+    # ------------------------
+    # Loop Check
+    # ------------------------
+    def _check_loop(self):
+        parent = self.parent_id
+        while parent:
+            if parent == self:
+                return True
+            parent = parent.parent_id
+        return False
