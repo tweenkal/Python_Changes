@@ -1,0 +1,41 @@
+from odoo import models, fields, api
+from odoo.exceptions import ValidationError, UserError
+
+class LibraryBook(models.Model):
+    _inherit = 'library.book'
+
+    @api.model
+    def default_get(self, fields_list):
+        res = super(LibraryBook, self).default_get(fields_list)
+
+        # Only set defaults if not already provided
+        if 'price' in fields_list and not res.get('price'):
+            res['price'] = 500
+
+        if 'pages' in fields_list and not res.get('pages'):
+            res['pages'] = 100
+
+        return res
+
+    @api.model
+    def create(self, vals):
+
+    # Category validation
+    if not vals.get('category_id'):
+        raise ValidationError("Category must be selected.")
+
+    # Edition validation
+    if not vals.get('edition_ids'):
+        raise ValidationError("At least one edition must be selected.")
+
+    # Pages & Price validation
+    if vals.get('pages', 0) <= 0:
+        raise ValidationError("Pages must be greater than 0.")
+
+    if vals.get('price', 0) <= 0:
+        raise ValidationError("Price must be greater than 0.")
+
+    return super(LibraryBook, self).create(vals)
+
+
+    
