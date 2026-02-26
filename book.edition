@@ -1,37 +1,39 @@
 from odoo import models, api
 from odoo.exceptions import ValidationError
 
-
 class BookEdition(models.Model):
     _inherit = 'book.edition'
 
-    # ============================================
-    # Validation Helper
-    # ============================================
-    def _validate_edition(self, vals):
-        for record in self:
-            quantity = vals.get('quantity', record.quantity)
-            price = vals.get('book_price', record.book_price)
-
-            if quantity <= 0:
-                raise ValidationError("Edition quantity must be greater than 0.")
-
-            if price <= 0:
-                raise ValidationError("Edition book price must be greater than 0.")
-
-    # ============================================
+    # ------------------------
     # create()
-    # ============================================
+    # ------------------------
     @api.model
     def create(self, vals):
-        record = super().create(vals)
-        record._validate_edition(vals)
-        return record
 
-    # ============================================
+        if vals.get('quantity', 0) <= 0:
+            raise ValidationError("Edition quantity must be greater than 0.")
+
+        if vals.get('book_price', 0) <= 0:
+            raise ValidationError("Book price must be greater than 0.")
+
+        return super(BookEdition, self).create(vals)
+
+    # ------------------------
     # write()
-    # ============================================
+    # ------------------------
     def write(self, vals):
-        res = super().write(vals)
-        self._validate_edition(vals)
-        return res
+
+        if 'quantity' in vals and vals.get('quantity') <= 0:
+            raise ValidationError("Edition quantity must be greater than 0.")
+
+        if 'book_price' in vals and vals.get('book_price') <= 0:
+            raise ValidationError("Book price must be greater than 0.")
+
+        return super(BookEdition, self).write(vals)
+
+    # ------------------------
+    # copy()
+    # ------------------------
+    def copy(self, default=None):
+        default = dict(default or {})
+        return super(BookEdition, self).copy(default)
