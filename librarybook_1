@@ -1,14 +1,16 @@
-from odoo import models, fields, api
-from odoo.exceptions import ValidationError, UserError
+from odoo import models, api
+from odoo.exceptions import ValidationError
 
 class LibraryBook(models.Model):
     _inherit = 'library.book'
 
+    # ------------------------
+    # default_get()
+    # ------------------------
     @api.model
     def default_get(self, fields_list):
         res = super(LibraryBook, self).default_get(fields_list)
 
-        # Only set defaults if not already provided
         if 'price' in fields_list and not res.get('price'):
             res['price'] = 500
 
@@ -17,25 +19,62 @@ class LibraryBook(models.Model):
 
         return res
 
+    # ------------------------
+    # create()
+    # ------------------------
     @api.model
     def create(self, vals):
 
-    # Category validation
-    if not vals.get('category_id'):
-        raise ValidationError("Category must be selected.")
+        if not vals.get('category_id'):
+            raise ValidationError("Category must be selected.")
 
-    # Edition validation
-    if not vals.get('edition_ids'):
-        raise ValidationError("At least one edition must be selected.")
+        if not vals.get('edition_ids'):
+            raise ValidationError("At least one edition must be selected.")
 
-    # Pages & Price validation
-    if vals.get('pages', 0) <= 0:
-        raise ValidationError("Pages must be greater than 0.")
+        if vals.get('pages', 0) <= 0:
+            raise ValidationError("Pages must be greater than 0.")
 
-    if vals.get('price', 0) <= 0:
-        raise ValidationError("Price must be greater than 0.")
+        if vals.get('price', 0) <= 0:
+            raise ValidationError("Price must be greater than 0.")
 
-    return super(LibraryBook, self).create(vals)
+        return super(LibraryBook, self).create(vals)
 
+    # ------------------------
+    # write()
+    # ------------------------
+    def write(self, vals):
 
-    
+        if 'category_id' in vals and not vals.get('category_id'):
+            raise ValidationError("Category must be selected.")
+
+        if 'edition_ids' in vals and not vals.get('edition_ids'):
+            raise ValidationError("At least one edition must be selected.")
+
+        if 'pages' in vals and vals.get('pages') <= 0:
+            raise ValidationError("Pages must be greater than 0.")
+
+        if 'price' in vals and vals.get('price') <= 0:
+            raise ValidationError("Price must be greater than 0.")
+
+        return super(LibraryBook, self).write(vals)
+
+    # ------------------------
+    # copy()
+    # ------------------------
+    def copy(self, default=None):
+        default = dict(default or {})
+        default['name'] = self.name + " (Copy)"
+        return super(LibraryBook, self).copy(default)
+
+    # ------------------------
+    # unlink()
+    # ------------------------
+    def unlink(self):
+
+        author_book = self.env['author.book']
+
+        for record in self:
+            related = author_book.search([('book_id', '=', record.id)])
+            related.unlink()
+
+        return super(LibraryBook, self).unlink()
