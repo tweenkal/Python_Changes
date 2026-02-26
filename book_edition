@@ -1,0 +1,24 @@
+class BookEdition(models.Model):
+    _inherit = 'book.edition'
+
+    @api.model
+    def create(self, vals):
+
+        if vals.get('quantity', 0) <= 0:
+            raise ValidationError("Edition quantity must be greater than 0.")
+
+        if vals.get('book_price', 0) <= 0:
+            raise ValidationError("Book price must be greater than 0.")
+
+        return super(BookEdition, self).create(vals)
+
+
+    def write(self, vals):
+
+    if 'quantity' in vals and vals.get('quantity') <= 0:
+        raise ValidationError("Edition quantity must be greater than 0.")
+
+    if 'book_price' in vals and vals.get('book_price') <= 0:
+        raise ValidationError("Book price must be greater than 0.")
+
+    return super(BookEdition, self).write(vals)
