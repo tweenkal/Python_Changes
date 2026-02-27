@@ -1,0 +1,7 @@
+<odoo>
+    <record id="attribute_editions" model="product.attribute">
+        <field name="name">Editions</field>
+        <field name="display_type">select</field>
+        <field name="create_variant">always</field>
+    </record>
+</odoo>
