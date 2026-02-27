@@ -1,0 +1,12 @@
+{
+    'name': 'AK Library Management ORM Extension',
+    'version': '1.0',
+    'depends': ['product', 'stock', 'ak_library_management_orm'],
+    'data': [
+        'data/product_attribute_demo.xml',
+        'views/library_book_view.xml',
+        'views/product_template_view.xml',
+        'views/product_category_view.xml',
+    ],
+    'installable': True,
+}
