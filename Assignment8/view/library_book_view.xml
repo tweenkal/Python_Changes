@@ -1,0 +1,35 @@
+<odoo>
+    <record id="view_library_book_form_inherit_product"
+            model="ir.ui.view">
+        <field name="name">library.book.form.product</field>
+        <field name="model">library.book</field>
+        <field name="inherit_id"
+               ref="ak_library_management_orm.view_library_book_form"/>
+        <field name="arch" type="xml">
+
+            <header>
+                <button name="action_create_product"
+                        string="Create Product"
+                        type="object"
+                        class="btn-primary"
+                        attrs="{'invisible':[('product_count','>',0)]}"/>
+            </header>
+
+            <xpath expr="//div[@class='oe_button_box']"
+                   position="inside">
+
+                <button name="action_view_products"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-product-hunt"
+                        attrs="{'invisible':[('product_count','=',0)]}">
+                    <field name="product_count"
+                           widget="statinfo"
+                           string="Product"/>
+                </button>
+
+            </xpath>
+
+        </field>
+    </record>
+</odoo>
