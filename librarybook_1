@@ -69,12 +69,13 @@ class LibraryBook(models.Model):
     # ------------------------
     # unlink()
     # ------------------------
-    def unlink(self):
+  def unlink(self):
 
-        author_book = self.env['author.book']
+    for record in self:
+        # Remove related author.book entries
+        author_books = self.env['author.book'].search([
+            ('book_id', '=', record.id)
+        ])
+        author_books.unlink()
 
-        for record in self:
-            related = author_book.search([('book_id', '=', record.id)])
-            related.unlink()
-
-        return super(LibraryBook, self).unlink()
+    return super(LibraryBook, self).unlink()
