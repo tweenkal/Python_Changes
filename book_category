@@ -1,6 +1,7 @@
 from odoo import models, api
 from odoo.exceptions import UserError
 
+
 class BookCategory(models.Model):
     _inherit = 'book.category'
 
@@ -11,9 +12,8 @@ class BookCategory(models.Model):
     def create(self, vals):
         record = super(BookCategory, self).create(vals)
 
-        if record.parent_id:
-            if record._check_loop():
-                raise UserError("Recursive category hierarchy is not allowed.")
+        if record._check_loop():
+            raise UserError("Recursive category hierarchy is not allowed.")
 
         return record
 
@@ -24,7 +24,7 @@ class BookCategory(models.Model):
         res = super(BookCategory, self).write(vals)
 
         for record in self:
-            if record.parent_id and record._check_loop():
+            if record._check_loop():
                 raise UserError("Recursive category hierarchy is not allowed.")
 
         return res
