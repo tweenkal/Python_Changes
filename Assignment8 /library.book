@@ -1,0 +1,12 @@
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+
+class LibraryBook(models.Model):
+    _inherit = 'library.book'
+
+    product_ids = fields.One2many('product.template', 'book_id')
+    product_count = fields.Integer(compute='_compute_product_count')
+
+    def _compute_product_count(self):
+        for rec in self:
+            rec.product_count = len(rec.product_ids)
