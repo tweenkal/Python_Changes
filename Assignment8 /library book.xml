@@ -1,0 +1,5 @@
+<button name="action_create_product"
+        type="object"
+        string="Create Product"
+        class="btn-primary"
+        attrs="{'invisible': [('product_count','>',0)]}"/>
