@@ -1,31 +1,31 @@
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError, ValidationError
-
+from odoo.exceptions import UserError
 
 class LibraryBook(models.Model):
     _inherit = "library.book"
 
     product_ids = fields.One2many(
-        "product.template", "book_id", string="Products"
+        'product.template', 'book_id', string="Products"
     )
 
     product_count = fields.Integer(
-        compute="_compute_product_count"
+        compute='_compute_product_count', string="Product Count"
     )
 
+    @api.depends('product_ids')
     def _compute_product_count(self):
         for rec in self:
             rec.product_count = len(rec.product_ids)
 
     # -------------------------
-    # CREATE PRODUCT BUTTON
+    # Create Product Button
     # -------------------------
     def action_create_product(self):
         self.ensure_one()
         if self.product_ids:
             raise UserError(_("Product already created."))
 
-        # 1️⃣ Category
+        # Product Category
         product_category = self.env['product.category'].search([
             ('book_categ_id', '=', self.category_id.id)
         ], limit=1)
@@ -43,44 +43,42 @@ class LibraryBook(models.Model):
                 'book_categ_id': self.category_id.id,
             })
 
-        # 2️⃣ Attribute Values
+        # Editions Attribute
         attribute = self.env.ref('ak_library_management_orm.attribute_book_edition')
-        attribute_values = []
-
+        value_ids = []
         for edition in self.edition_ids:
             value = self.env['product.attribute.value'].search([
                 ('name', '=', edition.name),
                 ('attribute_id', '=', attribute.id)
             ], limit=1)
-
             if not value:
                 value = self.env['product.attribute.value'].create({
                     'name': edition.name,
                     'attribute_id': attribute.id
                 })
+            value_ids.append(value.id)
 
-            attribute_values.append(value.id)
-
-        # 3️⃣ Create Product Template
+        # Create Product Template
         product = self.env['product.template'].create({
             'name': self.name,
             'type': 'consu',
+            'sale_ok': True,
+            'purchase_ok': True,
             'is_book_product': True,
             'book_id': self.id,
             'categ_id': product_category.id,
             'attribute_line_ids': [(0, 0, {
                 'attribute_id': attribute.id,
-                'value_ids': [(6, 0, attribute_values)]
-            })]
+                'value_ids': [(6, 0, value_ids)]
+            })],
         })
 
-        # 4️⃣ Update Variants
+        # Update variant price & quantity
         stock_location = self.env.ref('stock.stock_location_stock')
         for variant in product.product_variant_ids:
             edition = self.edition_ids.filtered(
                 lambda e: e.name in variant.product_template_attribute_value_ids.mapped('name')
             )
-
             if edition:
                 variant.lst_price = edition.price
                 self.env['stock.quant'].create({
@@ -92,7 +90,7 @@ class LibraryBook(models.Model):
         return True
 
     # -------------------------
-    # SMART BUTTON: Products
+    # Smart Button: Products
     # -------------------------
     def action_view_products(self):
         self.ensure_one()
