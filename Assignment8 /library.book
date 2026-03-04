@@ -1,110 +1,75 @@
-from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo import models, fields, api
 
 class LibraryBook(models.Model):
-    _inherit = "library.book"
+    _inherit = 'library.book'
 
-    product_ids = fields.One2many(
-        'product.template', 'book_id', string="Products"
-    )
+    product_id = fields.Many2one('product.template', string="Related Product")
 
-    product_count = fields.Integer(
-        compute='_compute_product_count', string="Product Count"
-    )
-
-    @api.depends('product_ids')
-    def _compute_product_count(self):
-        for rec in self:
-            rec.product_count = len(rec.product_ids)
-
-    # -------------------------
-    # Create Product Button
-    # -------------------------
     def action_create_product(self):
-        self.ensure_one()
-        if self.product_ids:
-            raise UserError(_("Product already created."))
+        product_obj = self.env['product.template']
+        attr_obj = self.env['product.attribute']
+        attr_val_obj = self.env['product.attribute.value']
+        categ_obj = self.env['product.category']
+        quant_obj = self.env['stock.quant']
 
-        # Product Category
-        product_category = self.env['product.category'].search([
-            ('book_categ_id', '=', self.category_id.id)
-        ], limit=1)
-
-        if not product_category:
-            parent = False
-            if self.category_id.parent_id:
-                parent = self.env['product.category'].search([
-                    ('book_categ_id', '=', self.category_id.parent_id.id)
-                ], limit=1)
-
-            product_category = self.env['product.category'].create({
+        # Get or create product category
+        product_categ = categ_obj.search([('book_categ_id', '=', self.category_id.id)], limit=1)
+        if not product_categ:
+            parent_categ = categ_obj.search([('book_categ_id', '=', self.category_id.parent_id.id)], limit=1)
+            product_categ = categ_obj.create({
                 'name': self.category_id.name,
-                'parent_id': parent.id if parent else False,
-                'book_categ_id': self.category_id.id,
+                'parent_id': parent_categ.id if parent_categ else False,
+                'book_categ_id': self.category_id.id
             })
 
-        # Editions Attribute
-        attribute = self.env.ref('ak_library_management_orm.attribute_book_edition')
-        value_ids = []
-        for edition in self.edition_ids:
-            value = self.env['product.attribute.value'].search([
-                ('name', '=', edition.name),
-                ('attribute_id', '=', attribute.id)
-            ], limit=1)
-            if not value:
-                value = self.env['product.attribute.value'].create({
-                    'name': edition.name,
-                    'attribute_id': attribute.id
-                })
-            value_ids.append(value.id)
-
-        # Create Product Template
-        product = self.env['product.template'].create({
+        # Create product template
+        product = product_obj.create({
             'name': self.name,
             'type': 'consu',
-            'sale_ok': True,
-            'purchase_ok': True,
-            'is_book_product': True,
+            'is_storable': True,
             'book_id': self.id,
-            'categ_id': product_category.id,
-            'attribute_line_ids': [(0, 0, {
-                'attribute_id': attribute.id,
-                'value_ids': [(6, 0, value_ids)]
-            })],
+            'categ_id': product_categ.id
         })
 
-        # Update variant price & quantity
-        stock_location = self.env.ref('stock.stock_location_stock')
-        for variant in product.product_variant_ids:
-            edition = self.edition_ids.filtered(
-                lambda e: e.name in variant.product_template_attribute_value_ids.mapped('name')
-            )
-            if edition:
-                variant.lst_price = edition.price
-                self.env['stock.quant'].create({
+        # Create product attribute values and link variants
+        editions_attr = attr_obj.search([('name', '=', 'Editions')], limit=1)
+        value_ids = []
+        for edition in self.editions_ids:
+            val = attr_val_obj.create({
+                'attribute_id': editions_attr.id,
+                'name': edition.name
+            })
+            value_ids.append(val.id)
+        product.write({'attribute_line_ids': [(0, 0, {
+            'attribute_id': editions_attr.id,
+            'value_ids': [(6, 0, value_ids)]
+        })]})
+
+        # Update variant price and quantity
+        for edition in self.editions_ids:
+            variant = product.product_variant_ids.filtered(lambda v: v.product_template_attribute_value_ids.name == edition.name)
+            if variant:
+                variant.write({'list_price': edition.price})
+                quant_obj.create({
                     'product_id': variant.id,
-                    'location_id': stock_location.id,
-                    'quantity': edition.quantity,
+                    'location_id': self.env.ref('stock.stock_location_stock').id,
+                    'quantity': edition.quantity
                 })
 
-        return True
+        self.product_id = product.id
 
-    # -------------------------
-    # Smart Button: Products
-    # -------------------------
-    def action_view_products(self):
-        self.ensure_one()
-        if len(self.product_ids) == 1:
+    def action_view_product(self):
+        products = self.mapped('product_id')
+        if len(products) == 1:
             return {
                 'type': 'ir.actions.act_window',
                 'res_model': 'product.template',
                 'view_mode': 'form',
-                'res_id': self.product_ids.id,
+                'res_id': products.id,
             }
-        else:
-            return {
-                'type': 'ir.actions.act_window',
-                'res_model': 'product.template',
-                'view_mode': 'tree,form',
-                'domain': [('id', 'in', self.product_ids.ids)],
-            }
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'product.template',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', products.ids)],
+        }
