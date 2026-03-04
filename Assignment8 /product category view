@@ -1,12 +1,15 @@
 <odoo>
-    <record id="view_product_category_form_inherit_book" model="ir.ui.view">
-        <field name="name">product.category.form.inherit.book</field>
+    <record id="view_product_category_form_buttons" model="ir.ui.view">
+        <field name="name">product.category.form.buttons</field>
         <field name="model">product.category</field>
-        <field name="inherit_id" ref="product.view_product_category_form"/>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
         <field name="arch" type="xml">
             <header>
-                <button name="action_view_book_category" type="object" string="Book Category"
-                    class="oe_stat_button"/>
+                <button name="action_open_book_category"
+                        string="Book Category"
+                        type="object"
+                        attrs="{'invisible':[('book_categ_id','=',False)]}"
+                        class="btn-secondary"/>
             </header>
         </field>
     </record>
