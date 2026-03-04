@@ -1,33 +1,60 @@
+# models/library_book.py
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
-
 class LibraryBook(models.Model):
-    _inherit = 'library.book'
+    _inherit = "library.book"
 
-    product_ids = fields.One2many('product.template', 'book_id')
-    product_count = fields.Integer(compute='_compute_product_count')
+    product_ids = fields.One2many(
+        "product.template", "book_id", string="Products"
+    )
+
+    product_count = fields.Integer(
+        compute="_compute_product_count"
+    )
 
     def _compute_product_count(self):
         for rec in self:
             rec.product_count = len(rec.product_ids)
 
-    # -----------------------------------------
+    # ------------------------------------------------
     # CREATE PRODUCT BUTTON
-    # -----------------------------------------
-
+    # ------------------------------------------------
     def action_create_product(self):
+
         self.ensure_one()
 
         if self.product_ids:
-            raise UserError(_("Product already exists."))
+            raise UserError(_("Product already created."))
 
-        product_category = self._get_or_create_product_category()
+        # ---------------------------------------
+        # 1️⃣ HANDLE PRODUCT CATEGORY
+        # ---------------------------------------
+        product_category = self.env['product.category'].search([
+            ('book_categ_id', '=', self.category_id.id)
+        ], limit=1)
 
+        if not product_category:
+            parent = False
+            if self.category_id.parent_id:
+                parent = self.env['product.category'].search([
+                    ('book_categ_id', '=', self.category_id.parent_id.id)
+                ], limit=1)
+
+            product_category = self.env['product.category'].create({
+                'name': self.category_id.name,
+                'parent_id': parent.id if parent else False,
+                'book_categ_id': self.category_id.id,
+            })
+
+        # ---------------------------------------
+        # 2️⃣ CREATE ATTRIBUTE VALUES FROM EDITIONS
+        # ---------------------------------------
         attribute = self.env.ref(
-            'ak_library_management_orm.product_attribute_editions')
+            'ak_library_management_orm.attribute_book_edition'
+        )
 
-        value_ids = []
+        attribute_values = []
 
         for edition in self.edition_ids:
             value = self.env['product.attribute.value'].search([
@@ -41,111 +68,38 @@ class LibraryBook(models.Model):
                     'attribute_id': attribute.id
                 })
 
-            value_ids.append(value.id)
+            attribute_values.append(value.id)
 
+        # ---------------------------------------
+        # 3️⃣ CREATE PRODUCT TEMPLATE
+        # ---------------------------------------
         product = self.env['product.template'].create({
             'name': self.name,
-            'detailed_type': 'consu',
+            'type': 'consu',
             'is_book_product': True,
             'book_id': self.id,
             'categ_id': product_category.id,
             'attribute_line_ids': [(0, 0, {
                 'attribute_id': attribute.id,
-                'value_ids': [(6, 0, value_ids)]
+                'value_ids': [(6, 0, attribute_values)]
             })]
         })
 
-        self._update_variants(product)
-
-        return True
-
-    # -----------------------------------------
-    # CATEGORY SYNC
-    # -----------------------------------------
-
-    def _get_or_create_product_category(self):
-
-        ProductCategory = self.env['product.category']
-
-        existing = ProductCategory.search([
-            ('book_categ_id', '=', self.category_id.id)
-        ], limit=1)
-
-        if existing:
-            return existing
-
-        parent = False
-        if self.category_id.parent_id:
-            parent = ProductCategory.search([
-                ('book_categ_id', '=', self.category_id.parent_id.id)
-            ], limit=1)
-
-            if not parent:
-                parent = ProductCategory.create({
-                    'name': self.category_id.parent_id.name,
-                    'book_categ_id': self.category_id.parent_id.id
-                })
-
-        return ProductCategory.create({
-            'name': self.category_id.name,
-            'parent_id': parent.id if parent else False,
-            'book_categ_id': self.category_id.id
-        })
-
-    # -----------------------------------------
-    # VARIANT UPDATE
-    # -----------------------------------------
-
-    def _update_variants(self, product):
-
-        stock_location = self.env.ref('stock.stock_location_stock')
-        StockQuant = self.env['stock.quant']
-
-        for edition in self.edition_ids:
-
-            variant = product.product_variant_ids.filtered(
-                lambda v: edition.name in v.attribute_value_ids.mapped('name')
+        # ---------------------------------------
+        # 4️⃣ UPDATE VARIANT PRICE & QUANTITY
+        # ---------------------------------------
+        for variant in product.product_variant_ids:
+            edition = self.edition_ids.filtered(
+                lambda e: e.name in variant.product_template_attribute_value_ids.mapped('name')
             )
 
-            if not variant:
-                continue
+            if edition:
+                variant.lst_price = edition.price
 
-            # Update Sales Price
-            variant.lst_price = edition.price
-
-            # Update Quantity
-            quant = StockQuant.search([
-                ('product_id', '=', variant.id),
-                ('location_id', '=', stock_location.id)
-            ], limit=1)
-
-            if quant:
-                quant.quantity = edition.quantity
-            else:
-                StockQuant.create({
+                self.env['stock.quant'].create({
                     'product_id': variant.id,
-                    'location_id': stock_location.id,
-                    'quantity': edition.quantity
+                    'location_id': self.env.ref('stock.stock_location_stock').id,
+                    'quantity': edition.quantity,
                 })
 
-    # -----------------------------------------
-    # SMART BUTTON ACTION
-    # -----------------------------------------
-
-    def action_view_product(self):
-        self.ensure_one()
-
-        if len(self.product_ids) == 1:
-            return {
-                'type': 'ir.actions.act_window',
-                'res_model': 'product.template',
-                'view_mode': 'form',
-                'res_id': self.product_ids.id
-            }
-        else:
-            return {
-                'type': 'ir.actions.act_window',
-                'res_model': 'product.template',
-                'view_mode': 'tree,form',
-                'domain': [('id', 'in', self.product_ids.ids)]
-            }
+        return True
