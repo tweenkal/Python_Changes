@@ -1,8 +1,20 @@
-# models/product_template.py
 from odoo import models, fields
+
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
     is_book_product = fields.Boolean(string="Created From Book")
     book_id = fields.Many2one("library.book", string="Book")
+
+    def action_view_books(self):
+        self.ensure_one()
+        if self.book_id:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'library.book',
+                'view_mode': 'form',
+                'res_id': self.book_id.id,
+            }
+        else:
+            return {'type': 'ir.actions.act_window_close'}
