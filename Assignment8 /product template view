@@ -1,11 +1,15 @@
 <odoo>
-    <record id="view_product_template_form_inherit_books" model="ir.ui.view">
-        <field name="name">product.template.form.inherit.books</field>
+    <record id="view_product_template_form_buttons" model="ir.ui.view">
+        <field name="name">product.template.form.buttons</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
             <header>
-                <button name="action_view_books" type="object" string="Books" class="oe_stat_button"/>
+                <button name="action_open_books"
+                        string="Books"
+                        type="object"
+                        attrs="{'invisible':[('book_id','=',False)]}"
+                        class="btn-secondary"/>
             </header>
         </field>
     </record>
