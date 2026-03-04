@@ -1,6 +1,6 @@
-# models/library_book.py
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
+
 
 class LibraryBook(models.Model):
     _inherit = "library.book"
@@ -17,19 +17,15 @@ class LibraryBook(models.Model):
         for rec in self:
             rec.product_count = len(rec.product_ids)
 
-    # ------------------------------------------------
+    # -------------------------
     # CREATE PRODUCT BUTTON
-    # ------------------------------------------------
+    # -------------------------
     def action_create_product(self):
-
         self.ensure_one()
-
         if self.product_ids:
             raise UserError(_("Product already created."))
 
-        # ---------------------------------------
-        # 1️⃣ HANDLE PRODUCT CATEGORY
-        # ---------------------------------------
+        # 1️⃣ Category
         product_category = self.env['product.category'].search([
             ('book_categ_id', '=', self.category_id.id)
         ], limit=1)
@@ -47,13 +43,8 @@ class LibraryBook(models.Model):
                 'book_categ_id': self.category_id.id,
             })
 
-        # ---------------------------------------
-        # 2️⃣ CREATE ATTRIBUTE VALUES FROM EDITIONS
-        # ---------------------------------------
-        attribute = self.env.ref(
-            'ak_library_management_orm.attribute_book_edition'
-        )
-
+        # 2️⃣ Attribute Values
+        attribute = self.env.ref('ak_library_management_orm.attribute_book_edition')
         attribute_values = []
 
         for edition in self.edition_ids:
@@ -70,9 +61,7 @@ class LibraryBook(models.Model):
 
             attribute_values.append(value.id)
 
-        # ---------------------------------------
-        # 3️⃣ CREATE PRODUCT TEMPLATE
-        # ---------------------------------------
+        # 3️⃣ Create Product Template
         product = self.env['product.template'].create({
             'name': self.name,
             'type': 'consu',
@@ -85,9 +74,8 @@ class LibraryBook(models.Model):
             })]
         })
 
-        # ---------------------------------------
-        # 4️⃣ UPDATE VARIANT PRICE & QUANTITY
-        # ---------------------------------------
+        # 4️⃣ Update Variants
+        stock_location = self.env.ref('stock.stock_location_stock')
         for variant in product.product_variant_ids:
             edition = self.edition_ids.filtered(
                 lambda e: e.name in variant.product_template_attribute_value_ids.mapped('name')
@@ -95,11 +83,30 @@ class LibraryBook(models.Model):
 
             if edition:
                 variant.lst_price = edition.price
-
                 self.env['stock.quant'].create({
                     'product_id': variant.id,
-                    'location_id': self.env.ref('stock.stock_location_stock').id,
+                    'location_id': stock_location.id,
                     'quantity': edition.quantity,
                 })
 
         return True
+
+    # -------------------------
+    # SMART BUTTON: Products
+    # -------------------------
+    def action_view_products(self):
+        self.ensure_one()
+        if len(self.product_ids) == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'product.template',
+                'view_mode': 'form',
+                'res_id': self.product_ids.id,
+            }
+        else:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'product.template',
+                'view_mode': 'tree,form',
+                'domain': [('id', 'in', self.product_ids.ids)],
+            }
