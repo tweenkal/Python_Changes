@@ -1,0 +1,30 @@
+<odoo>
+
+<record id="product_category_form_inherit_book_category" model="ir.ui.view">
+    <field name="name">product.category.form.book.category</field>
+    <field name="model">product.category</field>
+    <field name="inherit_id" ref="product.product_category_form_view"/>
+    <field name="arch" type="xml">
+
+        <xpath expr="//sheet" position="inside">
+
+            <div class="oe_button_box">
+
+                <button name="action_open_book_category"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-folder"
+                        attrs="{'invisible':[('book_categ_id','=',False)]}">
+
+                    <field name="book_categ_id" string="Book Category"/>
+
+                </button>
+
+            </div>
+
+        </xpath>
+
+    </field>
+</record>
+
+</odoo>
