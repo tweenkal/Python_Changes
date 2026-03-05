@@ -1,0 +1,7 @@
+from odoo import models, fields
+
+class ProductTemplate(models.Model):
+    _inherit = "product.template"
+
+    is_book_product = fields.Boolean(string="Created From Book")
+    book_id = fields.Many2one("library.book", string="Book")
