@@ -5,3 +5,15 @@ class ProductTemplate(models.Model):
 
     is_book_product = fields.Boolean(string="Created From Book")
     book_id = fields.Many2one("library.book", string="Book")
+
+
+    def action_open_book(self):
+
+    self.ensure_one()
+
+    return {
+        'type': 'ir.actions.act_window',
+        'res_model': 'library.book',
+        'view_mode': 'form',
+        'res_id': self.book_id.id
+    }
