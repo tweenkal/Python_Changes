@@ -1,0 +1,27 @@
+from odoo import models, api, _
+from odoo.exceptions import ValidationError
+
+
+class LibraryBookEdition(models.Model):
+    _name = 'library.book.edition'
+
+    def _validate_edition_vals(self, vals):
+        """Common validation for create and write."""
+
+        if 'quantity' in vals and vals.get('quantity', 0) <= 0:
+            raise ValidationError(_("Quantity must be greater than 0"))
+
+        if 'book_price' in vals and vals.get('book_price', 0) <= 0:
+            raise ValidationError(_("Price must be greater than 0"))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Create a new book edition record."""
+        for vals in vals_list:
+            self._validate_edition_vals(vals)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        """Update Book Edition record."""
+        self._validate_edition_vals(vals)
+        return super().write(vals)
