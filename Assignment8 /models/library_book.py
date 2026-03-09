@@ -152,11 +152,21 @@ class LibraryBook(models.Model):
 
     def action_view_product(self):
         self.ensure_one()
-        if self.product_id:
+        products = self.product_ids  # Standard field in Odoo library module
+
+        if len(products) == 1:
             return {
                 'name': 'Product',
                 'type': 'ir.actions.act_window',
                 'res_model': 'product.template',
                 'view_mode': 'form',
-                'res_id': self.product_id.id,
+                'res_id': products.id,
             }
+
+        return {
+            'name': 'Product',
+            'type': 'ir.actions.act_window',
+            'res_model': 'product.template',
+            'view_mode': 'tree,form',
+            'res_ids': products.ids,
+        }
