@@ -9,9 +9,13 @@ class ProductCategory(models.Model):
 
     self.ensure_one()
 
-    return {
-        'type': 'ir.actions.act_window',
-        'res_model': 'book.category',
-        'view_mode': 'form',
-        'res_id': self.book_categ_id.id
-    }
+     def action_view_book_category(self):
+        self.ensure_one()
+        if self.book_categ_id:
+            return {
+                'name': 'Book Category',
+                'type': 'ir.actions.act_window',
+                'res_model': 'library.book.category',
+                'view_mode': 'form',
+                'res_id': self.book_categ_id.id,
+            }
