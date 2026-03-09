@@ -1,0 +1,10 @@
+<odoo>
+    <record id="seq_my_model" model="ir.sequence">
+        <field name="name">My Model Sequence</field>
+        <field name="code">my.model.sequence</field>
+        <field name="prefix">MY/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+    </record>
+</odoo>
