@@ -5,17 +5,13 @@ class ProductCategory(models.Model):
 
     book_categ_id = fields.Many2one("book.category", string="Book Category")
 
-    def action_open_book_category(self):
-
-    self.ensure_one()
-
-     def action_view_book_category(self):
+    def action_view_book_category(self):
         self.ensure_one()
-        if self.book_categ_id:
+        if self.book_category_id:
             return {
                 'name': 'Book Category',
                 'type': 'ir.actions.act_window',
-                'res_model': 'library.book.category',
+                'res_model': 'library.category',
                 'view_mode': 'form',
-                'res_id': self.book_categ_id.id,
+                'res_id': self.book_category_id.id,
             }
