@@ -1,0 +1,12 @@
+from odoo import models, fields, api
+
+class MyModel(models.Model):
+    _name = 'my.model'
+
+    name = fields.Char(string="Reference", readonly=True, copy=False, default='New')
+
+    @api.model
+    def create(self, vals):
+        if vals.get('name', 'New') == 'New':
+            vals['name'] = self.env['ir.sequence'].next_by_code('my.model.sequence') or 'New'
+        return super(MyModel, self).create(vals)
