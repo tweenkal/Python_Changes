@@ -1,30 +1,12 @@
 <odoo>
-
-<record id="product_template_form_inherit_book" model="ir.ui.view">
-    <field name="name">product.template.form.book</field>
-    <field name="model">product.template</field>
-    <field name="inherit_id" ref="product.product_template_only_form_view"/>
-    <field name="arch" type="xml">
-
-        <xpath expr="//sheet" position="inside">
-
-            <div class="oe_button_box">
-
-                <button name="action_open_book"
-                        type="object"
-                        class="oe_stat_button"
-                        icon="fa-book"
-                        attrs="{'invisible':[('book_id','=',False)]}">
-
-                    <field name="book_id" string="Books"/>
-
-                </button>
-
-            </div>
-
-        </xpath>
-
-    </field>
-</record>
-
+    <record id="product_template_form_inherit" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.library</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <header>
+                <button name="action_view_books" type="object" string="Books" attrs="{'invisible':[('book_id','=',False)]}" class="btn-secondary"/>
+            </header>
+        </field>
+    </record>
 </odoo>
