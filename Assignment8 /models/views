@@ -1,0 +1,65 @@
+<odoo>
+    <!-- Library Book Form: Product Smart Button -->
+    <record id="view_library_book_form_inherit_product" model="ir.ui.view">
+        <field name="name">library.book.form.smartbutton.product</field>
+        <field name="model">library.book</field>
+        <field name="inherit_id" ref="library.view_library_book_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_view_product"
+                        type="object"
+                        string="Product"
+                        class="oe_stat_button"
+                        attrs="{'invisible': [('product_ids','=',False)]}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Product Form: Books Smart Button -->
+    <record id="view_product_form_inherit_books" model="ir.ui.view">
+        <field name="name">product.template.form.smartbutton.books</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_view_books"
+                        type="object"
+                        string="Books"
+                        class="oe_stat_button"
+                        attrs="{'invisible': [('id','not in',books_ids)]}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Product Category Form: Book Category Smart Button -->
+    <record id="view_product_category_form_inherit_book" model="ir.ui.view">
+        <field name="name">product.category.form.smartbutton.bookcategory</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_view_book_category"
+                        type="object"
+                        string="Book Category"
+                        class="oe_stat_button"
+                        attrs="{'invisible':[('book_category_id','=',False)]}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Library Category Form: Product Category Smart Button -->
+    <record id="view_library_category_form_inherit_product" model="ir.ui.view">
+        <field name="name">library.category.form.smartbutton.productcategory</field>
+        <field name="model">library.category</field>
+        <field name="inherit_id" ref="library.view_library_category_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_view_product_category"
+                        type="object"
+                        string="Product Category"
+                        class="oe_stat_button"
+                        attrs="{'invisible':[('product_category_id','=',False)]}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
