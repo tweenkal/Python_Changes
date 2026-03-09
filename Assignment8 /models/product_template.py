@@ -7,13 +7,13 @@ class ProductTemplate(models.Model):
     book_id = fields.Many2one("library.book", string="Book")
 
 
-    def action_open_book(self):
-
-    self.ensure_one()
-
-    return {
-        'type': 'ir.actions.act_window',
-        'res_model': 'library.book',
-        'view_mode': 'form',
-        'res_id': self.book_id.id
-    }
+    def action_view_books(self):
+        self.ensure_one()
+        if self.book_id:
+            return {
+                'name': 'Book',
+                'type': 'ir.actions.act_window',
+                'res_model': 'library.book',
+                'view_mode': 'form',
+                'res_id': self.book_id.id,
+            }
