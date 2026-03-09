@@ -1,0 +1,10 @@
+def action_view_product_category(self):
+        self.ensure_one()
+        if self.product_category_id:
+            return {
+                'name': 'Product Category',
+                'type': 'ir.actions.act_window',
+                'res_model': 'product.category',
+                'view_mode': 'form',
+                'res_id': self.product_category_id.id,
+            }
