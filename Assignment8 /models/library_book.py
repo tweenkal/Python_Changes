@@ -150,28 +150,13 @@ class LibraryBook(models.Model):
     # Smart Button Action
     # ---------------------------------------------------------
 
-    def action_open_products(self):
-
+    def action_view_product(self):
         self.ensure_one()
-
-        if self.product_count == 1:
-
-            product = False
-
-            for rec in self.product_ids:
-                product = rec
-
+        if self.product_id:
             return {
+                'name': 'Product',
                 'type': 'ir.actions.act_window',
                 'res_model': 'product.template',
                 'view_mode': 'form',
-                'res_id': product.id
+                'res_id': self.product_id.id,
             }
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Products',
-            'res_model': 'product.template',
-            'view_mode': 'tree,form',
-            'domain': [('book_id', '=', self.id)]
-        }
