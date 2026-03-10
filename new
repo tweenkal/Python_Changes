@@ -1,40 +1,93 @@
-  location = self.env.ref('stock.stock_location_stock')
+@api.model_create_multi
+    def create(self, vals_list):
+        """
+        Create library book records with validation and generate an ISBN
+        sequence if the value is still set to _("New").
 
-            for edition in book.edition_ids:
-                for variant in product.product_variant_ids:
-                    for attr_val in variant.product_template_attribute_value_ids:
-                        if attr_val.name == edition.name:
-                            variant.write({'lst_price': edition.book_price})
+        Args:
+            vals_list (list): Values for records to create.
 
-                            quant = self.env['stock.quant'].search([
-                                ('product_id', '=', variant.id),
-                                ('location_id', '=', location.id)
-                            ], limit=1)
+        Returns:
+            recordset: Created library.book records.
 
-                            if quant:
-                                quant.write({
-                                    'quantity': edition.quantity
-                                })
+        Raises:
+            ValidationError: If validation fails.
+        """
+        for vals in vals_list:
+            self._validate_book_data(vals)
 
+            if vals.get('isbn', _("New")) == _("New"):
+                vals['isbn'] = self.env['ir.sequence'].next_by_code(
+                    'library.book'
+                ) or _("New")
 
-
-
-location = self.env.ref('stock.stock_location_stock')
-
-            total_qty = 0
-            for edition in book.edition_ids:
-                for variant in product.product_variant_ids:
-                    for attr_val in variant.product_template_attribute_value_ids:
-                        if attr_val.name == edition.name:
-                            variant.write({'lst_price': edition.book_price})
-
-                            total_qty += edition.quantity
-
-            product._consu_virtual_qty = total_qty
+        return super().create(vals_list)
 
 
-product template
+
+# -*- coding: utf-8 -*-
+
+from odoo import api, fields, models, _
 
 
-    consu_virtual_qty = fields.Float(string="On-Hand Qty (Virtual)",
-                                     help="Sum of edition quantities for consumable products")
+class AuthorAuthor(models.Model):
+    _inherit = 'author.author'
+
+    author_ref = fields.Char(
+        string='Reference',
+        required=True,
+        copy=False,
+        readonly=True,
+        default=lambda self: _("New")
+    )
+
+    def unlink(self):
+        """
+        Delete author records and related author.book records.
+
+        Returns:
+            bool: True if deletion succeeds.
+        """
+        for author_record in self:
+            author_book = self.env['author.book']
+
+            related = author_book.search(
+                [('author_id', '=', author_record.id)]
+            )
+            related.unlink()
+
+        return super().unlink()
+
+    def copy(self, default=None):
+        """
+        Duplicate an author record.
+
+        Args:
+            default (dict, optional): Override values.
+
+        Returns:
+            recordset: Duplicated author.author record.
+        """
+        default = dict(default or {})
+        default['name'] = self.name + _(" (copy)")
+        return super().copy(default)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Create author records and generate a reference sequence if
+        the value is still set to _("New").
+
+        Args:
+            vals_list (list): Values for records to create.
+
+        Returns:
+            recordset: Created author.author records.
+        """
+        for vals in vals_list:
+            if vals.get('author_ref', _("New")) == _("New"):
+                vals['author_ref'] = self.env['ir.sequence'].next_by_code(
+                    'author.author'
+                ) or _("New")
+
+        return super().create(vals_list)
