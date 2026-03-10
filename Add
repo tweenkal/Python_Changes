@@ -1,0 +1,22 @@
+location = self.env.ref('stock.stock_location_stock')
+
+for variant in product.product_variant_ids:
+    attr_names = variant.product_template_attribute_value_ids.mapped('name')
+    edition = book.edition_ids.filtered(lambda e: e.name in attr_names)[:1]
+
+    if edition:
+        variant.lst_price = edition.book_price
+
+        if variant.type == 'product':
+            quant = self.env['stock.quant'].search([
+                ('product_id', '=', variant.id),
+                ('location_id', '=', location.id)
+            ], limit=1)
+
+            current_qty = quant.quantity if quant else 0
+            diff = edition.quantity - current_qty
+
+            if diff:
+                self.env['stock.quant']._update_available_quantity(
+                    variant, location, diff
+                )
