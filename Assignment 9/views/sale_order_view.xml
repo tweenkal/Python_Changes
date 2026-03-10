@@ -1,0 +1,34 @@
+<odoo>
+
+    <record id="sale_order_form_manager_approval" model="ir.ui.view">
+        <field name="name">sale.order.manager.approval</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Hide confirm button -->
+            <xpath expr="//button[@name='action_confirm']" position="attributes">
+                <attribute name="invisible">approval_required and not approval_granted</attribute>
+            </xpath>
+
+            <!-- Manager Buttons -->
+            <xpath expr="//button[@name='action_confirm']" position="after">
+
+                <button name="action_manager_approve"
+                        string="Approve"
+                        type="object"
+                        class="btn-primary"
+                        invisible="not approval_required or approval_granted"/>
+
+                <button name="action_manager_reject"
+                        string="Reject"
+                        type="object"
+                        class="btn-danger"
+                        invisible="not approval_required"/>
+
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
