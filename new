@@ -15,3 +15,26 @@
                                 quant.write({
                                     'quantity': edition.quantity
                                 })
+
+
+
+
+location = self.env.ref('stock.stock_location_stock')
+
+            total_qty = 0
+            for edition in book.edition_ids:
+                for variant in product.product_variant_ids:
+                    for attr_val in variant.product_template_attribute_value_ids:
+                        if attr_val.name == edition.name:
+                            variant.write({'lst_price': edition.book_price})
+
+                            total_qty += edition.quantity
+
+            product._consu_virtual_qty = total_qty
+
+
+product template
+
+
+    consu_virtual_qty = fields.Float(string="On-Hand Qty (Virtual)",
+                                     help="Sum of edition quantities for consumable products")
