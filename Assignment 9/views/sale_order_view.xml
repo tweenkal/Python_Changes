@@ -1,30 +1,34 @@
 <odoo>
 
-    <record id="sale_order_form_manager_approval" model="ir.ui.view">
-        <field name="name">sale.order.manager.approval</field>
+    <record id="sale_order_form_inherit_library" model="ir.ui.view">
+        <field name="name">sale.order.form.library.approval</field>
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
 
-            <!-- Hide confirm button -->
+            <!-- Modify Confirm Button -->
             <xpath expr="//button[@name='action_confirm']" position="attributes">
-                <attribute name="invisible">approval_required and not approval_granted</attribute>
+                <attribute name="attrs">
+                    {'invisible': [('approval_required','=',True),('approval_done','=',False)]}
+                </attribute>
             </xpath>
 
-            <!-- Manager Buttons -->
-            <xpath expr="//button[@name='action_confirm']" position="after">
+            <!-- Approve Button -->
+            <xpath expr="//header" position="inside">
 
                 <button name="action_manager_approve"
-                        string="Approve"
                         type="object"
+                        string="Approve"
                         class="btn-primary"
-                        invisible="not approval_required or approval_granted"/>
+                        attrs="{'invisible':[('approval_required','=',False)]}"
+                        groups="base.group_user"/>
 
                 <button name="action_manager_reject"
-                        string="Reject"
                         type="object"
+                        string="Reject"
                         class="btn-danger"
-                        invisible="not approval_required"/>
+                        attrs="{'invisible':[('approval_required','=',False)]}"
+                        groups="base.group_user"/>
 
             </xpath>
 
