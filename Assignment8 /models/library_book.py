@@ -1,6 +1,5 @@
 from odoo import models, fields, api
 
-
 class LibraryBook(models.Model):
     _inherit = "library.book"
 
@@ -14,159 +13,92 @@ class LibraryBook(models.Model):
         compute="_compute_product_count"
     )
 
-    # ---------------------------------------------------------
-    # Compute Product Count
-    # ---------------------------------------------------------
-
     def _compute_product_count(self):
         for rec in self:
-            count = 0
-            for product in rec.product_ids:
-                count = count + 1
-            rec.product_count = count
-
-    # ---------------------------------------------------------
-    # Create Product Button
-    # ---------------------------------------------------------
+            rec.product_count = len(rec.product_ids)
 
     def action_create_product(self):
 
-        edition_attribute = self.env.ref(
-            'ak_library_management_orm.product_attribute_editions'
+        ProductTemplate = self.env['product.template']
+        ProductCategory = self.env['product.category']
+        Attribute = self.env.ref(
+            'ak_library_product_extension.attribute_book_edition'
         )
 
         for book in self:
 
-            # -------------------------------------------------
-            # Find Product Category
-            # -------------------------------------------------
+            # find or create category
+            categ = ProductCategory.search([
+                ('book_categ_id', '=', book.category_id.id)
+            ], limit=1)
 
-            category = self.env['product.category'].search(
-                [('book_categ_id', '=', book.category_id.id)],
-                limit=1
-            )
-
-            # -------------------------------------------------
-            # Create Category if not found
-            # -------------------------------------------------
-
-            if not category:
-
-                parent_category = False
-
-                if book.category_id.parent_id:
-
-                    parent_category = self.env['product.category'].search(
-                        [('book_categ_id', '=', book.category_id.parent_id.id)],
-                        limit=1
-                    )
-
-                    if not parent_category:
-                        parent_category = self.env['product.category'].create({
-                            'name': book.category_id.parent_id.name,
-                            'book_categ_id': book.category_id.parent_id.id
-                        })
-
-                category = self.env['product.category'].create({
+            if not categ:
+                categ = ProductCategory.create({
                     'name': book.category_id.name,
-                    'parent_id': parent_category.id if parent_category else False,
                     'book_categ_id': book.category_id.id
                 })
 
-            # -------------------------------------------------
-            # Create Attribute Values from Editions
-            # -------------------------------------------------
-
-            value_ids = []
-
+            # create attribute values
+            values = []
             for edition in book.edition_ids:
+                val = self.env['product.attribute.value'].search([
+                    ('name', '=', edition.name),
+                    ('attribute_id', '=', Attribute.id)
+                ], limit=1)
 
-                value = self.env['product.attribute.value'].search(
-                    [
-                        ('name', '=', edition.name),
-                        ('attribute_id', '=', edition_attribute.id)
-                    ],
-                    limit=1
-                )
-
-                if not value:
-                    value = self.env['product.attribute.value'].create({
+                if not val:
+                    val = self.env['product.attribute.value'].create({
                         'name': edition.name,
-                        'attribute_id': edition_attribute.id
+                        'attribute_id': Attribute.id
                     })
 
-                value_ids.append(value.id)
+                values.append(val.id)
 
-            # -------------------------------------------------
-            # Create Product Template
-            # -------------------------------------------------
+            attribute_line = [(0, 0, {
+                'attribute_id': Attribute.id,
+                'value_ids': [(6, 0, values)]
+            })]
 
-            product = self.env['product.template'].create({
+            product = ProductTemplate.create({
                 'name': book.name,
                 'type': 'consu',
-                'categ_id': category.id,
+                'is_storable': True,
                 'is_book_product': True,
-                'book_id': book.id
+                'book_id': book.id,
+                'categ_id': categ.id,
+                'attribute_line_ids': attribute_line
             })
 
-            # -------------------------------------------------
-            # Create Attribute Line
-            # -------------------------------------------------
+            # update variant price and quantity
+            for variant in product.product_variant_ids:
 
-            attribute_line = self.env['product.template.attribute.line'].create({
-                'product_tmpl_id': product.id,
-                'attribute_id': edition_attribute.id
-            })
+                for edition in book.edition_ids:
 
-            attribute_line.write({
-                'value_ids': value_ids
-            })
+                    if edition.name in variant.display_name:
 
-            # -------------------------------------------------
-            # Update Variant Price and Quantity
-            # -------------------------------------------------
+                        variant.lst_price = edition.price
 
-            for edition in book.edition_ids:
+                        self.env['stock.quant'].create({
+                            'product_id': variant.id,
+                            'location_id': self.env.ref('stock.stock_location_stock').id,
+                            'quantity': edition.quantity
+                        })
 
-                for variant in product.product_variant_ids:
+    def action_view_products(self):
 
-                    for attr_val in variant.product_template_attribute_value_ids:
-
-                        if attr_val.name == edition.name:
-
-                            variant.write({
-                                'lst_price': edition.price
-                            })
-
-                            self.env['stock.quant'].create({
-                                'product_id': variant.id,
-                                'location_id': self.env.ref(
-                                    'stock.stock_location_stock'
-                                ).id,
-                                'quantity': edition.quantity
-                            })
-
-    # ---------------------------------------------------------
-    # Smart Button Action
-    # ---------------------------------------------------------
-
-    def action_view_product(self):
-        self.ensure_one()
-        products = self.product_ids  # Standard field in Odoo library module
+        products = self.product_ids
 
         if len(products) == 1:
             return {
-                'name': 'Product',
                 'type': 'ir.actions.act_window',
                 'res_model': 'product.template',
                 'view_mode': 'form',
-                'res_id': products.id,
+                'res_id': products.id
             }
 
         return {
-            'name': 'Product',
             'type': 'ir.actions.act_window',
             'res_model': 'product.template',
             'view_mode': 'tree,form',
-            'res_ids': products.ids,
+            'domain': [('id', 'in', products.ids)]
         }
