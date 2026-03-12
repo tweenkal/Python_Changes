@@ -1,47 +1,62 @@
-from odoo import models, fields, api
-from odoo.exceptions import UserError
+from odoo import models, fields, _
+from odoo.exceptions import ValidationError
+
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
+    approval_status = fields.Selection([
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected')
+    ], string="Approval Status", default='pending')
+
     approval_required = fields.Boolean(string="Approval Required", default=False)
-    approval_done = fields.Boolean(string="Approval Done", default=False)
 
     def action_confirm(self):
 
         for order in self:
 
-            low_stock_products = []
+            # If manager approved then proceed
+            if order.approval_status == 'approved':
+                return super(SaleOrder, order).action_confirm()
+
+            low_stock_books = []
 
             for line in order.order_line:
                 if line.product_id.qty_available < 5:
-                    low_stock_products.append(line.product_id.name)
+                    low_stock_books.append(line.product_id.name)
 
-            if low_stock_products and not order.approval_done:
+            if low_stock_books:
 
                 order.approval_required = True
+                order.approval_status = 'pending'
 
-                product_list = ", ".join(low_stock_products)
+                books = ", ".join(low_stock_books)
 
-                raise UserError(
-                    f"Approval needed! The following books have low stock: {product_list}"
+                raise ValidationError(
+                    _("Approval needed! The following books have low stock: %s") % books
                 )
 
         return super(SaleOrder, self).action_confirm()
 
-    def action_manager_approve(self):
+    def action_approve_order(self):
 
         if not self.env.user.is_manager:
-            raise UserError("Only Managers can approve the order.")
+            raise ValidationError(_("Only managers can approve orders"))
 
         for order in self:
-            order.approval_done = True
+            order.approval_status = 'approved'
             order.approval_required = False
 
-    def action_manager_reject(self):
+        return True
+
+    def action_reject_order(self):
 
         if not self.env.user.is_manager:
-            raise UserError("Only Managers can reject the order.")
+            raise ValidationError(_("Only managers can reject orders"))
 
         for order in self:
-            order.action_cancel()
+            order.approval_status = 'rejected'
+
+        return self.action_cancel()
