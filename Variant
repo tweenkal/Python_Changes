@@ -1,0 +1,18 @@
+for variant in product.product_variant_ids:
+    for attr_val in variant.product_template_attribute_value_ids:
+
+        for edition in book.edition_ids:
+
+            if attr_val.name == edition.name:
+
+                variant.write({
+                    'lst_price': edition.book_price
+                })
+
+                self.env['stock.quant'].create({
+                    'product_id': variant.id,
+                    'location_id': self.env.ref(
+                        'stock.stock_location_stock'
+                    ).id,
+                    'quantity': edition.quantity
+                })
