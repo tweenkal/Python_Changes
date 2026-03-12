@@ -1,0 +1,39 @@
+<odoo>
+
+    <record id="sale_order_form_approval" model="ir.ui.view">
+        <field name="name">sale.order.form.approval</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+
+        <field name="arch" type="xml">
+
+            <!-- Hide Confirm button when approval required -->
+
+            <xpath expr="//button[@name='action_confirm']" position="attributes">
+                <attribute name="attrs">
+                    {'invisible':[('approval_required','=',True)]}
+                </attribute>
+            </xpath>
+
+            <!-- Approve Reject Buttons -->
+
+            <xpath expr="//button[@name='action_confirm']" position="after">
+
+                <button name="action_approve_order"
+                        string="Approve"
+                        type="object"
+                        class="btn-primary"
+                        attrs="{'invisible':[('approval_required','=',False)]}"/>
+
+                <button name="action_reject_order"
+                        string="Reject"
+                        type="object"
+                        class="btn-danger"
+                        attrs="{'invisible':[('approval_required','=',False)]}"/>
+
+            </xpath>
+
+        </field>
+    </record>
+
+</odoo>
