@@ -1,93 +1,98 @@
-@api.model_create_multi
-    def create(self, vals_list):
-        """
-        Create library book records with validation and generate an ISBN
-        sequence if the value is still set to _("New").
+def action_create_product(self):
+    """
+    Create product template and variants based on book editions.
+    Map book categories to product categories and generate variants
+    for each edition.
+    """
 
-        Args:
-            vals_list (list): Values for records to create.
-
-        Returns:
-            recordset: Created library.book records.
-
-        Raises:
-            ValidationError: If validation fails.
-        """
-        for vals in vals_list:
-            self._validate_book_data(vals)
-
-            if vals.get('isbn', _("New")) == _("New"):
-                vals['isbn'] = self.env['ir.sequence'].next_by_code(
-                    'library.book'
-                ) or _("New")
-
-        return super().create(vals_list)
-
-
-
-# -*- coding: utf-8 -*-
-
-from odoo import api, fields, models, _
-
-
-class AuthorAuthor(models.Model):
-    _inherit = 'author.author'
-
-    author_ref = fields.Char(
-        string='Reference',
-        required=True,
-        copy=False,
-        readonly=True,
-        default=lambda self: _("New")
+    edition_attribute = self.env.ref(
+        'ak_library_management_orm.product_attribute_editions'
     )
 
-    def unlink(self):
-        """
-        Delete author records and related author.book records.
+    for book in self:
 
-        Returns:
-            bool: True if deletion succeeds.
-        """
-        for author_record in self:
-            author_book = self.env['author.book']
+        parent_category = False
+        category = False
 
-            related = author_book.search(
-                [('author_id', '=', author_record.id)]
+        # -----------------------------
+        # Create/Search Parent Category
+        # -----------------------------
+        if book.category_id and book.category_id.parent_id:
+
+            parent_category = self.env['product.category'].search(
+                [('book_categ_id', '=', book.category_id.parent_id.id)],
+                limit=1
             )
-            related.unlink()
 
-        return super().unlink()
+            if not parent_category:
+                parent_category = self.env['product.category'].create({
+                    'name': book.category_id.parent_id.name,
+                    'book_categ_id': book.category_id.parent_id.id
+                })
 
-    def copy(self, default=None):
-        """
-        Duplicate an author record.
+        # -----------------------------
+        # Create/Search Child Category
+        # -----------------------------
+        if book.category_id:
 
-        Args:
-            default (dict, optional): Override values.
+            category = self.env['product.category'].search(
+                [('book_categ_id', '=', book.category_id.id)],
+                limit=1
+            )
 
-        Returns:
-            recordset: Duplicated author.author record.
-        """
-        default = dict(default or {})
-        default['name'] = self.name + _(" (copy)")
-        return super().copy(default)
+            if not category:
+                category = self.env['product.category'].create({
+                    'name': book.category_id.name,
+                    'parent_id': parent_category.id if parent_category else False,
+                    'book_categ_id': book.category_id.id
+                })
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        """
-        Create author records and generate a reference sequence if
-        the value is still set to _("New").
+        # -----------------------------
+        # Create Attribute Values
+        # -----------------------------
+        value_ids = []
 
-        Args:
-            vals_list (list): Values for records to create.
+        for edition in book.edition_ids:
 
-        Returns:
-            recordset: Created author.author records.
-        """
-        for vals in vals_list:
-            if vals.get('author_ref', _("New")) == _("New"):
-                vals['author_ref'] = self.env['ir.sequence'].next_by_code(
-                    'author.author'
-                ) or _("New")
+            value = self.env['product.attribute.value'].search(
+                [
+                    ('name', '=', edition.name),
+                    ('attribute_id', '=', edition_attribute.id)
+                ],
+                limit=1
+            )
 
-        return super().create(vals_list)
+            if not value:
+                value = self.env['product.attribute.value'].create({
+                    'name': edition.name,
+                    'attribute_id': edition_attribute.id
+                })
+
+            value_ids.append(value.id)
+
+        # -----------------------------
+        # Check if product already exists
+        # -----------------------------
+        existing_product = self.env['product.template'].search(
+            [('book_id', '=', book.id)],
+            limit=1
+        )
+
+        if existing_product:
+            continue
+
+        # -----------------------------
+        # Create Product Template
+        # -----------------------------
+        product = self.env['product.template'].create({
+            'name': book.name,
+            'type': 'consu',
+            'is_book_product': True,
+            'is_storable': True,
+            'categ_id': category.id if category else False,
+            'book_id': book.id,
+            'attribute_line_ids': [(0, 0, {
+                'attribute_id': edition_attribute.id,
+                'value_ids': [(6, 0, value_ids)]
+            })]
+        })
