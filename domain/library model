@@ -1,0 +1,42 @@
+from odoo import models, fields, api
+
+class LibraryBook(models.Model):
+    _inherit = "library.book"
+
+    # Override author_id to add domain filter
+    author_id = fields.Many2one(
+        'res.partner', 
+        string="Author", 
+        domain=[('status', '=', 'active')]
+    )
+
+    # Computed product count for smart button
+    product_count = fields.Integer(
+        string="Product Count", 
+        compute="_compute_product_count"
+    )
+
+    @api.depends('product_ids')
+    def _compute_product_count(self):
+        for book in self:
+            book.product_count = len(book.product_ids)
+
+    # Smart button navigation
+    def action_view_products(self):
+        self.ensure_one()
+        if self.product_count > 1:
+            return {
+                'name': 'Products',
+                'type': 'ir.actions.act_window',
+                'res_model': 'product.product',
+                'view_mode': 'tree,form',
+                'domain': [('book_id', '=', self.id)],
+            }
+        elif self.product_count == 1:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'product.product',
+                'view_mode': 'form',
+                'res_id': self.product_ids.id,
+            }
+        return {'type': 'ir.actions.act_window_close'}
