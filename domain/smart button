@@ -1,0 +1,23 @@
+<odoo>
+    <!-- Smart button -->
+    <record id="view_library_book_form_smart_button" model="ir.ui.view">
+        <field name="name">library.book.form.smart.button</field>
+        <field name="model">library.book</field>
+        <field name="inherit_id" ref="library.view_library_book_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='product_ids']" position="replace">
+                <button type="object" name="action_view_products" string="Products (%(product_count)s)" class="oe_stat_button"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Low Price Filter -->
+    <record id="library_book_search_low_price" model="ir.ui.view">
+        <field name="name">library.book.search.low.price</field>
+        <field name="model">library.book</field>
+        <field name="inherit_id" ref="library.view_library_book_filter"/>
+        <field name="arch" type="xml">
+            <filter string="Low Price" name="low_price" domain="[('price','&lt;',200)]"/>
+        </field>
+    </record>
+</odoo>
