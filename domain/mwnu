@@ -1,0 +1,14 @@
+<odoo>
+    <menuitem id="menu_active_authors"
+              name="Active Authors"
+              parent="library.menu_library"
+              sequence="15"
+              action="action_active_authors"/>
+
+    <record id="action_active_authors" model="ir.actions.act_window">
+        <field name="name">Active Authors</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('status', '=', 'active')]</field>
+    </record>
+</odoo>
