@@ -1,12 +1,214 @@
-from odoo import models, fields, api
+# -*- coding: utf-8 -*-
 
-class MyModel(models.Model):
-    _name = 'my.model'
+from odoo import fields, api, models, _
+from odoo.exceptions import ValidationError
 
-    name = fields.Char(string="Reference", readonly=True, copy=False, default='New')
+
+class LibraryBook(models.Model):
+    _inherit = 'library.book'
+
+    product_count = fields.Integer(compute='_compute_product_count',
+        string='Product Count')
 
     @api.model
-    def create(self, vals):
-        if vals.get('name', 'New') == 'New':
-            vals['name'] = self.env['ir.sequence'].next_by_code('my.model.sequence') or 'New'
-        return super(MyModel, self).create(vals)
+    def default_get(self, fields_list):
+        """
+            Set default values for price and pages when creating a new book.
+            Args:
+                fields_list : List of requested field names.
+            Returns:
+                dict: Default values for the requested fields.
+        """
+        book = super().default_get(fields_list)
+        if 'price' in fields_list and not book.get('price'):
+            book['price'] = 500.0
+        if 'pages' in fields_list and not book.get('pages'):
+            book['pages'] = 100
+
+        return book
+
+    def _validate_book(self, vals):
+        """
+            Validate book values before create/write.
+            Args:
+                vals : Field values to validate.
+            Raises:
+                ValidationError:If category and edition is missing and pages
+                and price <= 0.
+        """
+        if 'category_id' in vals and not vals.get('category_id'):
+            raise ValidationError(_("Category must be selected."))
+
+        pages = vals.get('pages', getattr(self, 'pages', 0))
+        price = vals.get('price', getattr(self, 'price', 0))
+        if pages <= 0:
+            raise ValidationError(_("Pages must be greater than 0."))
+        if price <= 0:
+            raise ValidationError(_("Price must be greater than 0."))
+
+        if 'edition_ids' in vals:
+            edition_ids = vals.get('edition_ids')
+            if not edition_ids:
+                raise ValidationError(_('At least one edition is required.'))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+            Create new library book records with validation.
+            Args:
+                vals_list : List of field values for each book.
+            Returns:
+                recordset: Created library.book records otherwise raises
+                ValidationError.
+        """
+        for vals in vals_list:
+            self._validate_book(vals)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        """
+            Update library book records with validation.
+            Args:
+                vals : Field values to update.
+            Returns:
+                bool: True if update is successful otherwise raises
+                ValidationError.
+        """
+        for record in self:
+            record._validate_book(vals)
+        return super().write(vals)
+
+    def unlink(self):
+        """
+            Delete library book records and related author.book entries.
+            Returns:
+                bool: True if deletion is successful.
+        """
+        for book_record in self:
+            author_book = self.env['author.book']
+
+            author_record = author_book.search(
+                [('book_id', '=', book_record.id)])
+            author_record.unlink()
+
+        return super().unlink()
+
+    def copy(self, default=None):
+        """
+            Duplicate a library book record.
+            Args:
+                default : Values to override in the copy.
+            Returns:
+                recordset: The duplicated library.book record.
+        """
+        default = dict(default or {})
+        default['name'] = self.name + "(copy)"
+        return super().copy(default)
+
+    @api.depends()
+    def _compute_product_count(self):
+        """
+            Compute number of product template linked to each book.
+            Args:
+                self : Library book record to compute product count.
+            Returns:
+                product_count : Number of product linked to each book.
+        """
+        for book in self:
+            book.product_count = self.env['product.template'].search_count([
+                ('book_id', '=', book.id)
+            ])
+
+    def action_create_product(self):
+        """
+            create product template and variants based on book editions.
+            book category to product categories and generate varients for each
+            editions. show price and onhand quantity
+        """
+        edition_attribute = self.env.ref(
+            'ak_library_management_orm.product_attribute_editions')
+        stock_location = self.env.ref('stock.stock_location_stock')
+
+        for book in self:
+            parent = book.category_id.parent_id
+            parent_categ = parent and (
+                    self.env['product.category'].search(
+                        [('book_categ_id', '=', parent.id)], limit=1
+                    ) or self.env['product.category'].create({
+                'name': parent.name,
+                'book_categ_id': parent.id
+            }))
+
+            category = self.env['product.category'].search(
+                [('book_categ_id', '=', book.category_id.id)], limit=1
+            ) or self.env['product.category'].create({
+                'name': book.category_id.name,
+                'book_categ_id': book.category_id.id
+            })
+
+            category.parent_id = parent_categ.id if parent_categ else False
+
+            editions = {edition.name: edition for edition in book.edition_ids}
+            value_ids = []
+
+            for name in editions:
+                val = self.env['product.attribute.value'].search([
+                    ('name', '=', name),
+                    ('attribute_id', '=', edition_attribute.id)
+                ], limit=1) or self.env['product.attribute.value'].create({
+                    'name': name,
+                    'attribute_id': edition_attribute.id
+                })
+                value_ids.append(val.id)
+
+            total_price = sum(
+                edition.book_price for edition in editions.values())
+
+            product = self.env['product.template'].create({
+                'name': book.name,
+                'type': 'consu',
+                'is_book_product': True,
+                'is_storable': True,
+                'categ_id': category.id,
+                'book_id': book.id,
+                'list_price': total_price,
+                'attribute_line_ids': [(0, 0, {
+                    'attribute_id': edition_attribute.id,
+                    'value_ids': [(6, 0, value_ids)]
+                })]
+            })
+
+            for variant in product.product_variant_ids:
+                for attr in variant.product_template_attribute_value_ids:
+                    edition = editions.get(attr.name)
+                    if not edition:
+                        continue
+
+                    attr.price_extra = edition.book_price - total_price
+
+                    self.env['stock.quant'].create({
+                        'product_id': variant.id,
+                        'location_id': stock_location.id,
+                        'quantity': edition.quantity
+                    })
+
+    def action_view_product(self):
+        """
+            Open the product form view or list view.
+            Args:
+                self : Library book record to open the product form.
+            Returns:
+                Dict : Action Dictionary to open the product view.
+        """
+        self.ensure_one()
+        products = self.env['product.template'].search(
+            [('book_id', '=', self.id)]
+        )
+
+        return len(products) == 1 and {
+            'name': 'Product',
+            'type': 'ir.actions.act_window',
+            'res_model': 'product.template',
+            'view_mode': 'form',
+            'res_id': products.id,
+        }
