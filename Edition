@@ -1,27 +1,99 @@
-from odoo import models, api, _
+# -*- coding: utf-8 -*-
+
+from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
 
-class LibraryBookEdition(models.Model):
-    _name = 'library.book.edition'
+class SaleOrder(models.Model):
+    """
+        Sale order for low stock and approval.Track approval state for orders
+        and show approve/reject button to manager only non manager see a
+        validation popup when confirming low stock orders.
+    """
+    _inherit = 'sale.order'
 
-    def _validate_edition_vals(self, vals):
-        """Common validation for create and write."""
+    approval_state = fields.Selection([
+        ('none', 'None'),
+        ('approve', 'Approved'),
+        ('reject', 'Rejected')
+    ], string="Approval Status", default='none', copy=False)
 
-        if 'quantity' in vals and vals.get('quantity', 0) <= 0:
-            raise ValidationError(_("Quantity must be greater than 0"))
+    low_stock_book_order = fields.Boolean(
+        string="Low Stock Book Order",
+        compute="_compute_low_stock_and_manager",
+        store=False
+    )
 
-        if 'book_price' in vals and vals.get('book_price', 0) <= 0:
-            raise ValidationError(_("Price must be greater than 0"))
+    low_stock_and_manager = fields.Boolean(
+        string="Low Stock and Manager",
+        compute="_compute_low_stock_and_manager",
+        store=False
+    )
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Create a new book edition record."""
-        for vals in vals_list:
-            self._validate_edition_vals(vals)
-        return super().create(vals_list)
+    @api.depends('order_line.product_id', 'order_line.product_uom_qty', 'approval_state')
+    def _compute_low_stock_and_manager(self):
+        """
+            Compute for book product with low stock and manager access.
+            Args:
+                self : recordset of sale.order records to compute.
+            Returns:
+                None
+        """
+        for order in self:
+            low_stock = any(
+                line.product_id.is_book_product and line.product_id.qty_available < 5
+                for line in order.order_line
+            )
+            is_manager = self.env.user.is_manager
+            order.low_stock_and_manager = low_stock and is_manager and order.approval_state == 'none'
 
-    def write(self, vals):
-        """Update Book Edition record."""
-        self._validate_edition_vals(vals)
-        return super().write(vals)
+    def action_confirm(self):
+        """
+            Confirm the order but if book product have a low stock and the
+            current user is not a manager.
+            Args:
+                ValidationError : if any book product has less than 5 units
+                available
+                                and the current user is not a manager.
+            Returns:
+                Result of super().action_confirm()
+        """
+        for order in self:
+            low_stock_books = [
+                line.product_id.name
+                for line in order.order_line
+                if
+                line.product_id.is_book_product and line.product_id.qty_available < 5
+            ]
+
+            if low_stock_books and not self.env.user.is_manager:
+                raise ValidationError(
+                    _("Approval needed! The following books have low stock: %s") %
+                    ", ".join(low_stock_books)
+                )
+
+            return super().action_confirm()
+
+    def action_manager_approve(self):
+        """
+            Approve the order if the current user is a manager.
+            Args:
+                self : recordset of sale.order records to approve.
+            Returns:
+                bool : True if approved and user is a manager
+        """
+        self.approval_state = 'approve'
+        self._compute_low_stock_and_manager()
+        return True
+
+    def action_manager_reject(self):
+        """
+            Reject the order if the current user is a manager.
+            Args:
+                self : recordset of sale.order records to reject.
+            Returns:
+                bool : True if rejected and cancel the order if user is
+                manager.
+        """
+        self.approval_state = 'reject'
+        return self.action_cancel()
