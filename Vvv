@@ -1,0 +1,75 @@
+from odoo import models, fields, api
+
+class SaleOrder(models.Model):
+    _inherit = 'sale.order'
+
+    job_name = fields.Char(string="Job Name")
+
+    @api.model
+    def create(self, vals):
+        if vals.get('opportunity_id'):
+            opportunity = self.env['crm.lead'].browse(vals['opportunity_id'])
+            vals['job_name'] = opportunity.name
+        return super().create(vals)
+
+    def _prepare_picking(self):
+        res = super()._prepare_picking()
+        res['job_name'] = self.job_name
+        return res
+
+    def _prepare_invoice(self):
+        res = super()._prepare_invoice()
+        res['job_name'] = self.job_name
+        return res
+
+    # Sequential Warning Entry
+    def action_confirm(self):
+        return self._check_warnings(step=1)
+
+    def _check_warnings(self, step):
+        self.ensure_one()
+
+        # Step 1
+        if step == 1 and self.partner_id.untrustworthy:
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Warning',
+                'res_model': 'warning.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {
+                    'default_message': 'This customer is marked as untrustworthy. Do you want to continue?',
+                    'default_next_step': 2,
+                    'default_order_id': self.id,
+                }
+            }
+
+        # Step 2
+        if step == 2 and not self.opportunity_id:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'warning.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {
+                    'default_message': 'This quotation is not linked to any opportunity. Continue?',
+                    'default_next_step': 3,
+                    'default_order_id': self.id,
+                }
+            }
+
+        # Step 3
+        if step == 3 and self.amount_total > 50000:
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'warning.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {
+                    'default_message': 'Amount exceeds 50,000. Continue?',
+                    'default_next_step': 4,
+                    'default_order_id': self.id,
+                }
+            }
+
+        return super(SaleOrder, self).action_confirm()
