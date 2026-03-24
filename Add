@@ -1,22 +1,35 @@
-location = self.env.ref('stock.stock_location_stock')
+<?xml version="1.0" encoding="UTF-8" ?>
 
-for variant in product.product_variant_ids:
-    attr_names = variant.product_template_attribute_value_ids.mapped('name')
-    edition = book.edition_ids.filtered(lambda e: e.name in attr_names)[:1]
+<odoo>
 
-    if edition:
-        variant.lst_price = edition.book_price
+    <!-- Main menu for Library -->
+    <menuitem id="menu_library_root"
+              name="Library"
+              parent="ak_library_management.menu_library_root"
+              sequence="15"/>
 
-        if variant.type == 'product':
-            quant = self.env['stock.quant'].search([
-                ('product_id', '=', variant.id),
-                ('location_id', '=', location.id)
-            ], limit=1)
+     <!-- Sub menu for Author -->
+    <menuitem id="ak_library_management.menu_author"
+              name="Author"
+              parent="menu_library_root"
+              action="ak_library_management.action_author_author"
+              sequence="10"/>
 
-            current_qty = quant.quantity if quant else 0
-            diff = edition.quantity - current_qty
+    <!-- Sub menu for Books -->
+    <menuitem id="ak_library_management.menu_library_book"
+              name="Book"
+              parent="menu_library_root"
+              action="ak_library_management.action_library_book"
+              sequence="20"/>
 
-            if diff:
-                self.env['stock.quant']._update_available_quantity(
-                    variant, location, diff
-                )
+    <!-- Sub menu for Book category -->
+    <menuitem id="ak_library_management.menu_library_category"
+              name="Book Category"
+              parent="ak_library_management.menu_library_config"/>
+
+    <!-- Sub menu for book edition-->
+    <menuitem id="ak_library_management.menu_book_edition"
+              name="Book Edition"
+              parent="ak_library_management.menu_library_config"/>
+
+</odoo>
