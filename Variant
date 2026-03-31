@@ -1,15 +1,42 @@
-for variant in product.product_variant_ids:
-    for attr_val in variant.product_template_attribute_value_ids:
-        for edition in book.edition_ids:
-            if attr_val.product_attribute_value_id.name == edition.name:
-                variant.write({
-                    'lst_price': edition.book_price
+# -*- coding: utf-8 -*-
+
+from odoo import fields, models, _
+from odoo.exceptions import ValidationError
+
+
+class BookOrderWizard(models.Model):
+    _name = 'book.order.wizard'
+    _description = 'Library Book Order Wizard'
+
+    sale_order_id = fields.Many2one(comodel_name='sale.order',
+        string='Sale Order')
+
+    line_ids = fields.One2many(comodel_name='book.order.wizard.line',
+        inverse_name='wizard_id',
+        string='Lines')
+
+    def action_book_order_wizard(self):
+        self.ensure_one()
+
+        for line in self.line_ids:
+            if not line.product_id:
+                raise ValidationError(
+                    _("Please select a product for all lines."))
+            if line.quantity <= 0:
+                raise ValidationError(_("Quantity must be greater than zero."))
+
+            existing_line = self.sale_order_id.order_line.filtered(
+                lambda l: l.product_id == line.product_id
+            )
+
+            if existing_line:
+                existing_line.product_uom_qty += line.quantity
+            else:
+                self.env['sale.order.line'].create({
+                    'order_id': self.sale_order_id.id,
+                    'product_id': line.product_id.id,
+                    'product_uom_qty': line.quantity,
                 })
-                self.env['stock.quant'].create({
-                    'product_id': variant.id,
-                    'location_id': self.env.ref(
-                        'stock.stock_location_stock').id,
-                    'quantity': edition.quantity
-                })
-                break
-        break
+
+        self.sale_order_id.has_book_added = True
+        return {'type': 'ir.actions.act_window_close'}
