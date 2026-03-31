@@ -1,35 +1,79 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+# -*- coding: utf-8 -*-
 
-<odoo>
+from odoo import fields, models, _
+from odoo.exceptions import ValidationError
 
-    <!-- Main menu for Library -->
-    <menuitem id="menu_library_root"
-              name="Library"
-              parent="ak_library_management.menu_library_root"
-              sequence="15"/>
 
-     <!-- Sub menu for Author -->
-    <menuitem id="ak_library_management.menu_author"
-              name="Author"
-              parent="menu_library_root"
-              action="ak_library_management.action_author_author"
-              sequence="10"/>
+class BookOrderWizard(models.TransientModel):
+    _name = 'book.order.wizard'
+    _description = 'Library Book Order Wizard'
 
-    <!-- Sub menu for Books -->
-    <menuitem id="ak_library_management.menu_library_book"
-              name="Book"
-              parent="menu_library_root"
-              action="ak_library_management.action_library_book"
-              sequence="20"/>
+    sale_order_id = fields.Many2one(
+        comodel_name='sale.order',
+        string='Sale Order',
+        required=True
+    )
 
-    <!-- Sub menu for Book category -->
-    <menuitem id="ak_library_management.menu_library_category"
-              name="Book Category"
-              parent="ak_library_management.menu_library_config"/>
+    line_ids = fields.One2many(
+        comodel_name='book.order.wizard.line',
+        inverse_name='wizard_id',
+        string='Lines'
+    )
 
-    <!-- Sub menu for book edition-->
-    <menuitem id="ak_library_management.menu_book_edition"
-              name="Book Edition"
-              parent="ak_library_management.menu_library_config"/>
+    def action_book_order_wizard(self):
+        """
+        Validate wizard lines and merge or create sale order lines.
+        """
+        self.ensure_one()
 
-</odoo>
+        for line in self.line_ids:
+            # Validation
+            if not line.product_id or line.quantity <= 0:
+                raise ValidationError(
+                    _("Each line must have a product selected and Quantity "
+                      "must be greater than zero : %s") %
+                    (line.product_id.display_name or "Unknown Product")
+                )
+
+            # Find existing sale order lines with same product
+            so_lines = self.sale_order_id.order_line.filtered_domain([
+                ('product_id', '=', line.product_id.id)
+            ])
+
+            # Update existing lines (FIX: loop added)
+            if so_lines:
+                for rec in so_lines:
+                    rec.product_uom_qty += line.quantity
+            else:
+                # Create new sale order line
+                self.env['sale.order.line'].create({
+                    'order_id': self.sale_order_id.id,
+                    'product_id': line.product_id.id,
+                    'product_uom_qty': line.quantity,
+                })
+
+        # Mark flag on sale order
+        self.sale_order_id.has_book_added = True
+
+        return {'type': 'ir.actions.act_window_close'}
+
+
+class BookOrderWizardLine(models.TransientModel):
+    _name = 'book.order.wizard.line'
+    _description = 'Library Book Order Wizard Line'
+
+    wizard_id = fields.Many2one(
+        comodel_name='book.order.wizard',
+        string='Wizard'
+    )
+
+    product_id = fields.Many2one(
+        comodel_name='product.product',
+        string='Product',
+        required=True
+    )
+
+    quantity = fields.Float(
+        string='Quantity',
+        default=1.0
+    )
