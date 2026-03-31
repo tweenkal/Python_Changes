@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+
+from odoo import fields, models, _
+from odoo.exceptions import ValidationError
+
+
+class BookOrderWizard(models.TransientModel):
+    _name = 'book.order.wizard'
+    _description = 'Library Book Order Wizard'
+
+    sale_order_id = fields.Many2one(
+        comodel_name='sale.order',
+        string='Sale Order',
+        required=True
+    )
+
+    line_ids = fields.One2many(
+        comodel_name='book.order.wizard.line',
+        inverse_name='wizard_id',
+        string='Lines'
+    )
+
+    def action_book_order_wizard(self):
+        self.ensure_one()
+
+        # Existing SO lines mapped by product
+        existing_lines = {
+            line.product_id.id: line
+            for line in self.sale_order_id.order_line
+        }
+
+        wizard_products = []
+
+        for line in self.line_ids:
+            if not line.product_id or line.quantity <= 0:
+                raise ValidationError(
+                    _("Each line must have a product and quantity > 0")
+                )
+
+            product_id = line.product_id.id
+            wizard_products.append(product_id)
+
+            if product_id in existing_lines:
+                # Update existing line
+                existing_lines[product_id].product_uom_qty = line.quantity
+            else:
+                # Create new line
+                self.env['sale.order.line'].create({
+                    'order_id': self.sale_order_id.id,
+                    'product_id': product_id,
+                    'product_uom_qty': line.quantity,
+                })
+
+        # 🔥 Delete removed products
+        for product_id, so_line in existing_lines.items():
+            if product_id not in wizard_products:
+                so_line.unlink()
+
+        self.sale_order_id.has_book_added = True
+
+        return {'type': 'ir.actions.act_window_close'}
