@@ -1,0 +1,27 @@
+def action_book_order_wizard(self):
+    self.ensure_one()
+    so = self.sale_order_id
+    wizard_pids = self.line_ids.mapped('product_id.id')
+
+    # 1. DELETE: Remove SO lines not in Wizard
+    so.order_line.filtered(lambda l: l.product_id.id not in wizard_pids).unlink()
+
+    # 2. ADD & EDIT: Loop through wizard lines
+    for line in self.line_ids:
+        if not line.product_id or line.quantity <= 0:
+            raise ValidationError(_("Check Product/Quantity for: %s") % line.product_id.display_name)
+
+        # Search existing line in SO
+        existing_line = so.order_line.filtered(lambda l: l.product_id == line.product_id)
+
+        if existing_line:
+            existing_line.product_uom_qty = line.quantity  # Edit
+        else:
+            self.env['sale.order.line'].create({        # Add
+                'order_id': so.id,
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.quantity,
+            })
+
+    so.has_book_added = True
+    return {'type': 'ir.actions.act_window_close'}
