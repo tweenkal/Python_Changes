@@ -1,0 +1,45 @@
+    def action_book_order_wizard(self):
+        """
+        Validate wizard lines and Sync (Add, Edit, Delete) sale order lines using loops.
+        """
+        self.ensure_one()
+
+        # 1. DELETE Logic: Jo products wizard mein nahi hain unhe SO se delete karo
+        wizard_product_ids = []
+        for line in self.line_ids:
+            if line.product_id:
+                wizard_product_ids.append(line.product_id.id)
+
+        for so_line in self.sale_order_id.order_line:
+            if so_line.product_id.id not in wizard_product_ids:
+                so_line.unlink()
+
+        # 2. ADD & EDIT Logic
+        for line in self.line_ids:
+            # Validation
+            if not line.product_id:
+                raise ValidationError(_("Each line must have a product selected."))
+            
+            if line.quantity <= 0:
+                raise ValidationError(
+                    _("Quantity must be greater than zero for: %s") % 
+                    line.product_id.display_name)
+
+            # Search Logic
+            so_lines = self.sale_order_id.order_line.filtered_domain([
+                ('product_id', '=', line.product_id.id)])
+
+            # Update using Loop (Edit logic: Purani qty overwrite hogi)
+            if so_lines:
+                for so_line in so_lines:
+                    so_line.product_uom_qty = line.quantity
+            else:
+                # Create Logic (Add logic)
+                self.env['sale.order.line'].create({
+                    'order_id': self.sale_order_id.id,
+                    'product_id': line.product_id.id,
+                    'product_uom_qty': line.quantity,
+                })
+
+        self.sale_order_id.has_book_added = True
+        return {'type': 'ir.actions.act_window_close'}
