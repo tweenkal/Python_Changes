@@ -1,32 +1,33 @@
 def action_book_order_wizard(self):
     self.ensure_one()
-    
-    for line in self.line_ids:
-        # Separate Validations
-        if not line.product_id:
-            raise ValidationError(_("Product must be selected for all lines."))
-        
-        if line.quantity <= 0:
-            raise ValidationError(_("Quantity must be greater than 0 for: %s") % line.product_id.display_name)
 
-        # Find existing line
-        existing_line = self.sale_order_id.order_line.filtered(
-            lambda sol: sol.product_id == line.product_id
+    for wizard_line in self.line_ids:
+        if not wizard_line.product_id or wizard_line.quantity <= 0:
+            raise ValidationError(
+                _("Each line must have a product selected and Quantity "
+                  "must be greater than zero : %s") %
+                (wizard_line.product_id.display_name or "No Product")
+            )
+
+        # Filter sale order lines for the same product using lambda
+        existing_lines = self.sale_order_id.order_line.filtered(
+            lambda l: l.product_id.id == wizard_line.product_id.id
         )
 
-        if existing_line:
-            # If multiple lines exist, loop to update only the first one found
-            # This avoids singleton errors and index errors [0]
-            for sol in existing_line:
-                sol.product_uom_qty += line.quantity
-                break  # Stop after updating the first one
+        # Loop over filtered lines (singleton safe)
+        for so_line in existing_lines:
+            so_line.product_uom_qty += wizard_line.quantity
+            break  # Merge only with the first matching line
+
         else:
-            # Create new line if no match found
+            # If no line matched, create a new one
             self.env['sale.order.line'].create({
                 'order_id': self.sale_order_id.id,
-                'product_id': line.product_id.id,
-                'product_uom_qty': line.quantity,
+                'product_id': wizard_line.product_id.id,
+                'product_uom_qty': wizard_line.quantity,
             })
 
+    # Mark that books have been added
     self.sale_order_id.has_book_added = True
+
     return {'type': 'ir.actions.act_window_close'}
