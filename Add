@@ -9,18 +9,14 @@ def action_book_order_wizard(self):
                 (wizard_line.product_id.display_name or "No Product")
             )
 
-        # Filter sale order lines for the same product using lambda
-        existing_lines = self.sale_order_id.order_line.filtered(
-            lambda l: l.product_id.id == wizard_line.product_id.id
-        )
-
-        # Loop over filtered lines (singleton safe)
-        for so_line in existing_lines:
-            so_line.product_uom_qty += wizard_line.quantity
-            break  # Merge only with the first matching line
-
+        # Loop through existing sale order lines
+        for so_line in self.sale_order_id.order_line:
+            if so_line.product_id.id == wizard_line.product_id.id:
+                # Product exists → update quantity (edit)
+                so_line.product_uom_qty = wizard_line.quantity
+                break  # Exit loop after updating first match
         else:
-            # If no line matched, create a new one
+            # If for-loop completes without break → create new sale order line
             self.env['sale.order.line'].create({
                 'order_id': self.sale_order_id.id,
                 'product_id': wizard_line.product_id.id,
