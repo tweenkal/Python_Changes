@@ -1,39 +1,84 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+from odoo import models, fields, api, _
+from odoo.osv import expression
 
-<odoo>
+class BookReservation(models.Model):
+    _name = 'book.reservation'
+    _description = 'Library Book Reservation'
+    _rec_name = 'customer_id'
 
-    <!-- Main menu for Library module -->
-    <menuitem id="menu_library_root"
-              name="Library Management"
-              sequence="10"/>
+    # 2. Fields to Create
+    customer_id = fields.Many2one('author.author', string='Customer', required=True)
+    book_id = fields.Many2one('library.book', string='Book', required=True)
+    reservation_date = fields.Date(string='Reservation Date', default=fields.Date.today)
+    expected_pickup_date = fields.Date(string='Expected Pickup Date', required=True)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('reserved', 'Reserved'),
+        ('cancelled', 'Cancelled'),
+        ('picked_up', 'Picked Up')
+    ], string='Reservation Status', default='draft')
 
-    <!-- Menu to open Books screen -->
-    <menuitem id="menu_library_book"
-              name="Books"
-              parent="menu_library_root"
-              action="action_library_book"/>
+    # 3. Override _compute_display_name()
+    @api.depends('customer_id.name', 'customer_id.nationality')
+    def _compute_display_name(self):
+        for record in self:
+            name = record.customer_id.name or "Unnamed"
+            nationality = record.customer_id.nationality or "Unknown"
+            record.display_name = f"[{name}] - [{nationality}]"
 
-    <!-- Menu to open Categories screen -->
-    <menuitem id="menu_library_category"
-              name="Category"
-              parent="menu_library_root"
-              action="action_book_category"/>
+    # 4. Override name_search() (Custom style)
+    @api.model
+    def name_search(self, name='', domain=None, operator='ilike', limit=100):
+        domain = domain or []
+        if name:
+            # Search by Book Name, Price, or ISBN
+            domain = ['|', '|',
+                      ('book_id.name', operator, name),
+                      ('book_id.price', operator, name),
+                      ('book_id.isbn', operator, name)] + domain
+        return super(BookReservation, self).name_search(
+            name=name, domain=domain, operator=operator, limit=limit
+        )
 
-    <menuitem id="menu_author"
-              name="Authors"
-              parent="menu_library_root"
-              action="action_author_author"/>
+    # 5. Reservation Analysis using read_group()
+    def action_reservation_analysis(self):
+        # Use read_group to count reservations per book where state is 'reserved'
+        # Note: This method returns a list of dictionaries with counts
+        group_data = self.env['book.reservation'].read_group(
+            domain=[('state', '=', 'reserved')],
+            fields=['book_id'],
+            groupby=['book_id']
+        )
+        
+        # Return action to open Graph View specifically for reserved stats
+        return {
+            'name': _('Reservation Analysis'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'graph',
+            'domain': [('state', '=', 'reserved')],
+            'context': {'search_default_group_by_book_id': 1},
+        }
 
-    <!-- Configuration Menu-->
-    <menuitem id="menu_library_config"
-              name="Configuration"
-              parent="menu_library_root"
-              sequence="100"/>
+class Author(models.Model):
+    _inherit = 'author.author'
 
-    <!-- Book Edition Menu-->
-    <menuitem id="menu_book_edition"
-              name="Edition"
-              parent="menu_library_config"
-              action="action_book_edition"/>
-
-</odoo>
+    # 6. View Reservations using search_fetch()
+    def action_view_reservations_smart_button(self):
+        self.ensure_one()
+        
+        # Retrieve reservations for current author with state='reserved'
+        # search_fetch is an Odoo 17 method that fetches specific fields efficiently
+        reservations = self.env['book.reservation'].search_fetch(
+            [('customer_id', '=', self.id), ('state', '=', 'reserved')],
+            ['customer_id', 'book_id', 'state']
+        )
+        
+        return {
+            'name': _('Author Reservations'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', reservations.ids)],
+            'target': 'current',
+        }
