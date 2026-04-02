@@ -1,61 +1,83 @@
-# -*- coding: utf-8 -*-
+<odoo>
+    <!-- 5. Reservation Graph View -->
+    <record id="view_book_reservation_graph" model="ir.ui.view">
+        <field name="name">book.reservation.graph</field>
+        <field name="model">book.reservation</field>
+        <field name="arch" type="xml">
+            <graph string="Reservation Analysis" type="bar">
+                <field name="book_id" type="row"/>
+            </graph>
+        </field>
+    </record>
 
-from odoo import fields, models, _
-from odoo.exceptions import ValidationError
+    <!-- Reservation Tree View -->
+    <record id="view_book_reservation_tree" model="ir.ui.view">
+        <field name="name">book.reservation.tree</field>
+        <field name="model">book.reservation</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="customer_id"/>
+                <field name="book_id"/>
+                <field name="reservation_date"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
 
+    <!-- Reservation Form View with Analysis Button -->
+    <record id="view_book_reservation_form" model="ir.ui.view">
+        <field name="name">book.reservation.form</field>
+        <field name="model">book.reservation</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <!-- 5. Analysis Button in Header -->
+                    <button name="action_reservation_analysis" string="Reservation Analysis" 
+                            type="object" class="oe_highlight"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,reserved,picked_up"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="customer_id"/>
+                            <field name="book_id"/>
+                        </group>
+                        <group>
+                            <field name="reservation_date"/>
+                            <field name="expected_pickup_date"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
 
-class BookOrderWizard(models.TransientModel):
-    _name = 'book.order.wizard'
-    _description = 'Library Book Order Wizard'
+    <!-- 6. Smart Button in Author Form View -->
+    <record id="view_author_form_inherit" model="ir.ui.view">
+        <field name="name">author.author.form.inherit</field>
+        <field name="model">author.author</field>
+        <field name="inherit_id" ref="ak_library_management_orm.view_author_form"/>
+        <field name="arch" type="xml">
+            <div name="button_box" position="inside">
+                <button name="action_view_reservations_smart_button" type="object" 
+                        class="oe_stat_button" icon="fa-book">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Reservations</span>
+                    </div>
+                </button>
+            </div>
+        </field>
+    </record>
 
-    sale_order_id = fields.Many2one(
-        comodel_name='sale.order',
-        string='Sale Order',
-        required=True
-    )
+    <!-- Action for the Reservation Menu -->
+    <record id="action_book_reservation" model="ir.actions.act_window">
+        <field name="name">Book Reservations</field>
+        <field name="res_model">book.reservation</field>
+        <field name="view_mode">tree,form,graph</field>
+    </record>
 
-    line_ids = fields.One2many(
-        comodel_name='book.order.wizard.line',
-        inverse_name='wizard_id',
-        string='Lines'
-    )
-
-    def action_book_order_wizard(self):
-        self.ensure_one()
-
-        # Existing SO lines mapped by product
-        existing_lines = {
-            line.product_id.id: line
-            for line in self.sale_order_id.order_line
-        }
-
-        wizard_products = []
-
-        for line in self.line_ids:
-            if not line.product_id or line.quantity <= 0:
-                raise ValidationError(
-                    _("Each line must have a product and quantity > 0")
-                )
-
-            product_id = line.product_id.id
-            wizard_products.append(product_id)
-
-            if product_id in existing_lines:
-                # Update existing line
-                existing_lines[product_id].product_uom_qty = line.quantity
-            else:
-                # Create new line
-                self.env['sale.order.line'].create({
-                    'order_id': self.sale_order_id.id,
-                    'product_id': product_id,
-                    'product_uom_qty': line.quantity,
-                })
-
-        # 🔥 Delete removed products
-        for product_id, so_line in existing_lines.items():
-            if product_id not in wizard_products:
-                so_line.unlink()
-
-        self.sale_order_id.has_book_added = True
-
-        return {'type': 'ir.actions.act_window_close'}
+    <!-- Menu Item -->
+    <menuitem id="menu_book_reservation" name="Reservations" 
+              parent="ak_library_management_orm.menu_root" 
+              action="action_book_reservation"/>
+</odoo>
