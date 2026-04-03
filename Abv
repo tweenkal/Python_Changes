@@ -1,83 +1,84 @@
-<odoo>
-    <!-- 5. Reservation Graph View -->
-    <record id="view_book_reservation_graph" model="ir.ui.view">
-        <field name="name">book.reservation.graph</field>
-        <field name="model">book.reservation</field>
-        <field name="arch" type="xml">
-            <graph string="Reservation Analysis" type="bar">
-                <field name="book_id" type="row"/>
-            </graph>
-        </field>
-    </record>
+from odoo import models, fields, api, _
 
-    <!-- Reservation Tree View -->
-    <record id="view_book_reservation_tree" model="ir.ui.view">
-        <field name="name">book.reservation.tree</field>
-        <field name="model">book.reservation</field>
-        <field name="arch" type="xml">
-            <tree>
-                <field name="customer_id"/>
-                <field name="book_id"/>
-                <field name="reservation_date"/>
-                <field name="state"/>
-            </tree>
-        </field>
-    </record>
+class BookReservation(models.Model):
+    _name = 'book.reservation'
+    _description = 'Library Book Reservation Record'
+    _rec_name = 'customer_id'
 
-    <!-- Reservation Form View with Analysis Button -->
-    <record id="view_book_reservation_form" model="ir.ui.view">
-        <field name="name">book.reservation.form</field>
-        <field name="model">book.reservation</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <!-- 5. Analysis Button in Header -->
-                    <button name="action_reservation_analysis" string="Reservation Analysis" 
-                            type="object" class="oe_highlight"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,reserved,picked_up"/>
-                </header>
-                <sheet>
-                    <group>
-                        <group>
-                            <field name="customer_id"/>
-                            <field name="book_id"/>
-                        </group>
-                        <group>
-                            <field name="reservation_date"/>
-                            <field name="expected_pickup_date"/>
-                        </group>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
+    # 1. Fields Implementation
+    customer_id = fields.Many2one('author.author', string='Customer', required=True)
+    book_id = fields.Many2one('library.book', string='Book', required=True)
+    reservation_date = fields.Date(string='Reservation Date', default=fields.Date.context_today)
+    expected_pickup_date = fields.Date(string='Expected Pickup Date', required=True)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('reserved', 'Reserved'),
+        ('cancelled', 'Cancelled'),
+        ('picked_up', 'Picked Up')
+    ], string='Status', default='draft')
 
-    <!-- 6. Smart Button in Author Form View -->
-    <record id="view_author_form_inherit" model="ir.ui.view">
-        <field name="name">author.author.form.inherit</field>
-        <field name="model">author.author</field>
-        <field name="inherit_id" ref="ak_library_management_orm.view_author_form"/>
-        <field name="arch" type="xml">
-            <div name="button_box" position="inside">
-                <button name="action_view_reservations_smart_button" type="object" 
-                        class="oe_stat_button" icon="fa-book">
-                    <div class="o_stat_info">
-                        <span class="o_stat_text">Reservations</span>
-                    </div>
-                </button>
-            </div>
-        </field>
-    </record>
+    # 2. Override display name: [Customer Name] - [Nationality]
+    @api.depends('customer_id.name', 'customer_id.nationality')
+    def _compute_display_name(self):
+        for record in self:
+            name = record.customer_id.name or "Unknown"
+            nationality = record.customer_id.nationality or "N/A"
+            record.display_name = f"[{name}] - [{nationality}]"
 
-    <!-- Action for the Reservation Menu -->
-    <record id="action_book_reservation" model="ir.actions.act_window">
-        <field name="name">Book Reservations</field>
-        <field name="res_model">book.reservation</field>
-        <field name="view_mode">tree,form,graph</field>
-    </record>
+    # 3. Override name_search: Search by Title, Price, or ISBN
+    @api.model
+    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
+        domain = domain or []
+        if name:
+            search_domain = [
+                '|', '|',
+                ('book_id.name', operator, name),
+                ('book_id.price', operator, name),
+                ('book_id.isbn', operator, name)
+            ]
+            domain = search_domain + domain
+        return self._search(domain, limit=limit, order=order)
 
-    <!-- Menu Item -->
-    <menuitem id="menu_book_reservation" name="Reservations" 
-              parent="ak_library_management_orm.menu_root" 
-              action="action_book_reservation"/>
-</odoo>
+    # 4. Reservation Analysis using read_group()
+    def action_reservation_analysis(self):
+        """Requirement: Count reservations per book and open Graph View"""
+        # Logic to aggregate data
+        self.env['book.reservation'].read_group(
+            domain=[('state', '=', 'reserved')],
+            fields=['book_id'],
+            groupby=['book_id']
+        )
+        
+        return {
+            'name': _('Reservation Analysis'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'graph',
+            'domain': [('state', '=', 'reserved')],
+            'context': {'search_default_group_by_book_id': 1},
+            'target': 'current',
+        }
+
+
+class Author(models.Model):
+    _inherit = 'author.author'
+
+    # 5. Smart Button logic using search_fetch()
+    def action_view_author_reservations(self):
+        """Requirement: Retrieve 'reserved' status records using search_fetch"""
+        self.ensure_one()
+        
+        # Performance optimized retrieval
+        reservations = self.env['book.reservation'].search_fetch(
+            domain=[('customer_id', '=', self.id), ('state', '=', 'reserved')],
+            fields=['customer_id', 'book_id', 'state']
+        )
+
+        return {
+            'name': _('Reservations'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', reservations.ids)],
+            'target': 'current',
+        }
