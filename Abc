@@ -1,49 +1,63 @@
-from odoo import models, fields, api, _
+# -*- coding: utf-8 -*-
+from odoo import api, fields, models, _
 from datetime import timedelta
 
 class LibraryBook(models.Model):
     _name = 'library.book'
+    _inherit = ['mail.thread', 'mail.activity.mixin'] # Task 1: Add Chatter to Model
     _description = 'Library Book'
-    # Inherit mixins for chatter and activities
-    _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string="Book Name", required=True, tracking=True)
-    author_id = fields.Many2one('res.partner', string="Author", required=True, tracking=True)
+    name = fields.Char(string='Book Name', required=True, tracking=True)
+    
+    # Relation with library.author model
+    author_id = fields.Many2one('library.author', string='Author', tracking=True)
+    
+    price = fields.Float(string='Price', tracking=True)
+    isbn = fields.Char(string='ISBN', tracking=True)
 
-    # 7. Constraint: Prevent duplicate book names for the same author
+    # Task 7: Unique Book Name per Author
     _sql_constraints = [
-        ('unique_author_book', 'unique(name, author_id)', 
+        ('unique_author_book', 'UNIQUE(name, author_id)',
          'This author already has a book with the same name.')
     ]
+
+    @api.model
+    def name_search(self, name='', domain=None, operator='ilike', limit=100):
+        domain = domain or []
+        if name:
+            domain = ['|', '|',
+                      ('name', operator, name),
+                      ('price', operator, name),
+                      ('isbn', operator, name)] + domain
+        return super(LibraryBook, self).name_search(name=name, domain=domain, operator=operator, limit=limit)
 
     @api.model_create_multi
     def create(self, vals_list):
         books = super(LibraryBook, self).create(vals_list)
         for book in books:
-            # 3. Log Note on Book Creation
-            log_body = _("Book %s has been created by %s at %s.") % (
-                book.name, self.env.user.name, fields.Datetime.now()
-            )
-            book.message_post(body=log_body, subtype_xmlid='mail.mt_note')
+            # Task 3: Log Note on Creation
+            message = _("Book %s has been created by %s at %s.") % (
+                book.name, self.env.user.name, fields.Datetime.now())
+            book.message_post(body=message, subtype_xmlid='mail.mt_note')
 
-            # 4. Send Notification to Book Author
             if book.author_id:
-                notif_body = _("Your book %s is released by %s at %s. Please review your book and let us know if any corrections are required.") % (
-                    book.name, self.env.user.name, fields.Datetime.now()
-                )
-                # This sends an internal message/notification to the author
+                # Task 4: Notification to Author (Using partner_id from author model)
+                notification_message = _(
+                    "Your book %s is released by %s at %s. Please review your book and let us know if any corrections are required.") % (
+                    book.name, self.env.user.name, fields.Datetime.now())
+                
                 book.message_post(
-                    body=notif_body,
-                    partner_ids=[book.author_id.id],
+                    body=notification_message,
+                    partner_ids=[book.author_id.partner_id.id],
                     subtype_xmlid='mail.mt_comment'
                 )
 
-                # 5. Create Activity for the Author
+                # Task 5: Schedule Activity for Author (Using user_id from author model)
                 book.activity_schedule(
-                    'mail.mail_activity_data_todo', # Activity Type: To Do
-                    summary=_('Review your release %s') % book.name,
+                    'mail.mail_activity_data_todo',
+                    summary=_('Review your release %s Due Date: 2 days after the book record creation date.') % book.name,
                     note=_('Please review the book. It is ready for release.'),
-                    user_id=book.author_id.user_ids[0].id if book.author_id.user_ids else self.env.user.id,
-                    date_deadline=fields.Date.today() + timedelta(days=2) # 2 days after creation
+                    user_id=book.author_id.user_id.id,
+                    date_deadline=fields.Date.today() + timedelta(days=2),
                 )
         return books
