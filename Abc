@@ -1,84 +1,40 @@
 from odoo import models, fields, api, _
-from odoo.osv import expression
+from datetime import timedelta
 
-class BookReservation(models.Model):
-    _name = 'book.reservation'
-    _description = 'Library Book Reservation'
-    _rec_name = 'customer_id'
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    # 2. Fields to Create
-    customer_id = fields.Many2one('author.author', string='Customer', required=True)
-    book_id = fields.Many2one('library.book', string='Book', required=True)
-    reservation_date = fields.Date(string='Reservation Date', default=fields.Date.today)
-    expected_pickup_date = fields.Date(string='Expected Pickup Date', required=True)
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('reserved', 'Reserved'),
-        ('cancelled', 'Cancelled'),
-        ('picked_up', 'Picked Up')
-    ], string='Reservation Status', default='draft')
+    name = fields.Char(string='Book Name', required=True)
+    author_id = fields.Many2one('res.partner', string='Author', required=True)
 
-    # 3. Override _compute_display_name()
-    @api.depends('customer_id.name', 'customer_id.nationality')
-    def _compute_display_name(self):
-        for record in self:
-            name = record.customer_id.name or "Unnamed"
-            nationality = record.customer_id.nationality or "Unknown"
-            record.display_name = f"[{name}] - [{nationality}]"
+    _sql_constraints = [
+        ('unique_name_author', 'unique(name, author_id)', 'This author already has a book with the same name.')
+    ]
 
-    # 4. Override name_search() (Custom style)
-    @api.model
-    def name_search(self, name='', domain=None, operator='ilike', limit=100):
-        domain = domain or []
-        if name:
-            # Search by Book Name, Price, or ISBN
-            domain = ['|', '|',
-                      ('book_id.name', operator, name),
-                      ('book_id.price', operator, name),
-                      ('book_id.isbn', operator, name)] + domain
-        return super(BookReservation, self).name_search(
-            name=name, domain=domain, operator=operator, limit=limit
-        )
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for record in records:
+            # Log Note
+            record.message_post(body=_("Book %s has been created by %s at %s") % (
+                record.name, self.env.user.name, fields.Datetime.now()
+            ))
 
-    # 5. Reservation Analysis using read_group()
-    def action_reservation_analysis(self):
-        # Use read_group to count reservations per book where state is 'reserved'
-        # Note: This method returns a list of dictionaries with counts
-        group_data = self.env['book.reservation'].read_group(
-            domain=[('state', '=', 'reserved')],
-            fields=['book_id'],
-            groupby=['book_id']
-        )
-        
-        # Return action to open Graph View specifically for reserved stats
-        return {
-            'name': _('Reservation Analysis'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'graph',
-            'domain': [('state', '=', 'reserved')],
-            'context': {'search_default_group_by_book_id': 1},
-        }
+            if record.author_id:
+                # Notification to Author
+                record.message_post(
+                    body=_("Your book %s is released by %s. Please review.") % (record.name, self.env.user.name),
+                    partner_ids=[record.author_id.id]
+                )
 
-class Author(models.Model):
-    _inherit = 'author.author'
-
-    # 6. View Reservations using search_fetch()
-    def action_view_reservations_smart_button(self):
-        self.ensure_one()
-        
-        # Retrieve reservations for current author with state='reserved'
-        # search_fetch is an Odoo 17 method that fetches specific fields efficiently
-        reservations = self.env['book.reservation'].search_fetch(
-            [('customer_id', '=', self.id), ('state', '=', 'reserved')],
-            ['customer_id', 'book_id', 'state']
-        )
-        
-        return {
-            'name': _('Author Reservations'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'tree,form',
-            'domain': [('id', 'in', reservations.ids)],
-            'target': 'current',
-        }
+                # Schedule Activity (Removed [:1])
+                record.activity_schedule(
+                    'mail.mail_activity_data_todo',
+                    summary=_('Review your release %s') % record.name,
+                    note=_('Please review the book. It is ready for release.'),
+                    user_id=record.author_id.user_id.id or self.env.user.id,
+                    date_deadline=fields.Date.today() + timedelta(days=2)
+                )
+        return records
