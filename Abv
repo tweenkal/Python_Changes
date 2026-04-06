@@ -1,84 +1,52 @@
-from odoo import models, fields, api, _
-
-class BookReservation(models.Model):
-    _name = 'book.reservation'
-    _description = 'Library Book Reservation Record'
-    _rec_name = 'customer_id'
-
-    # 1. Fields Implementation
-    customer_id = fields.Many2one('author.author', string='Customer', required=True)
-    book_id = fields.Many2one('library.book', string='Book', required=True)
-    reservation_date = fields.Date(string='Reservation Date', default=fields.Date.context_today)
-    expected_pickup_date = fields.Date(string='Expected Pickup Date', required=True)
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('reserved', 'Reserved'),
-        ('cancelled', 'Cancelled'),
-        ('picked_up', 'Picked Up')
-    ], string='Status', default='draft')
-
-    # 2. Override display name: [Customer Name] - [Nationality]
-    @api.depends('customer_id.name', 'customer_id.nationality')
-    def _compute_display_name(self):
-        for record in self:
-            name = record.customer_id.name or "Unknown"
-            nationality = record.customer_id.nationality or "N/A"
-            record.display_name = f"[{name}] - [{nationality}]"
-
-    # 3. Override name_search: Search by Title, Price, or ISBN
-    @api.model
-    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
-        domain = domain or []
-        if name:
-            search_domain = [
-                '|', '|',
-                ('book_id.name', operator, name),
-                ('book_id.price', operator, name),
-                ('book_id.isbn', operator, name)
-            ]
-            domain = search_domain + domain
-        return self._search(domain, limit=limit, order=order)
-
-    # 4. Reservation Analysis using read_group()
     def action_reservation_analysis(self):
-        """Requirement: Count reservations per book and open Graph View"""
-        # Logic to aggregate data
-        self.env['book.reservation'].read_group(
-            domain=[('state', '=', 'reserved')],
-            fields=['book_id'],
-            groupby=['book_id']
-        )
-        
+        # ... (aapka existing code)
         return {
             'name': _('Reservation Analysis'),
             'type': 'ir.actions.act_window',
             'res_model': 'book.reservation',
             'view_mode': 'graph',
             'domain': [('state', '=', 'reserved')],
-            'context': {'search_default_group_by_book_id': 1},
-            'target': 'current',
+            'target': 'current'
         }
 
-
-class Author(models.Model):
-    _inherit = 'author.author'
-
-    # 5. Smart Button logic using search_fetch()
-    def action_view_author_reservations(self):
-        """Requirement: Retrieve 'reserved' status records using search_fetch"""
-        self.ensure_one()
-        
-        # Performance optimized retrieval
-        reservations = self.env['book.reservation'].search_fetch(
-            domain=[('customer_id', '=', self.id), ('state', '=', 'reserved')],
-            fields=['customer_id', 'book_id', 'state']
+    def _read_group(self, domain, groupby, aggregates, having=None, offset=0, limit=None, order=None):
+        """
+        Base _read_group method ko override kiya gaya hai.
+        """
+        # Yahan aap apna custom logic likh sakte hain results modify karne ke liye
+        res = super(BookReservation, self)._read_group(
+            domain=domain, 
+            groupby=groupby, 
+            aggregates=aggregates, 
+            having=having, 
+            offset=offset, 
+            limit=limit, 
+            order=order
         )
+        return res
 
-        return {
-            'name': _('Reservations'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'tree,form',
-            'domain': [('id', 'in', reservations.ids)],
-            'target': 'current',
-        }
+    def action_view_reservation(self):
+        # ... (aapka existing action code)
+        self.ensure_one()
+        reservation = self.env['book.reservation'].search_fetch(
+            domain=[('customer_id', '=', self.id), ('state', '=', 'reserved')]
+        )
+        # ... (rest of the action code)
+
+    @api.model
+    def _search_fetch(self, domain, field_names=None, offset=0, limit=None, order=None):
+        """
+        search_fetch ki internal method (_search_fetch) ko override kiya gaya hai.
+        """
+        # Yahan aap domain ya limit ko modify kar sakte hain
+        # For example: domain += [('active', '=', True)]
+        
+        result = super(ResPartner, self)._search_fetch(
+            domain=domain, 
+            field_names=field_names, 
+            offset=offset, 
+            limit=limit, 
+            order=order
+        )
+        
+        return result
