@@ -4,37 +4,46 @@ from datetime import timedelta
 class LibraryBook(models.Model):
     _name = 'library.book'
     _description = 'Library Book'
+    # Inherit mixins for chatter and activities
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
-    name = fields.Char(string='Book Name', required=True)
-    author_id = fields.Many2one('res.partner', string='Author', required=True)
+    name = fields.Char(string="Book Name", required=True, tracking=True)
+    author_id = fields.Many2one('res.partner', string="Author", required=True, tracking=True)
 
+    # 7. Constraint: Prevent duplicate book names for the same author
     _sql_constraints = [
-        ('unique_name_author', 'unique(name, author_id)', 'This author already has a book with the same name.')
+        ('unique_author_book', 'unique(name, author_id)', 
+         'This author already has a book with the same name.')
     ]
 
     @api.model_create_multi
     def create(self, vals_list):
-        records = super().create(vals_list)
-        for record in records:
-            # Log Note
-            record.message_post(body=_("Book %s has been created by %s at %s") % (
-                record.name, self.env.user.name, fields.Datetime.now()
-            ))
+        books = super(LibraryBook, self).create(vals_list)
+        for book in books:
+            # 3. Log Note on Book Creation
+            log_body = _("Book %s has been created by %s at %s.") % (
+                book.name, self.env.user.name, fields.Datetime.now()
+            )
+            book.message_post(body=log_body, subtype_xmlid='mail.mt_note')
 
-            if record.author_id:
-                # Notification to Author
-                record.message_post(
-                    body=_("Your book %s is released by %s. Please review.") % (record.name, self.env.user.name),
-                    partner_ids=[record.author_id.id]
+            # 4. Send Notification to Book Author
+            if book.author_id:
+                notif_body = _("Your book %s is released by %s at %s. Please review your book and let us know if any corrections are required.") % (
+                    book.name, self.env.user.name, fields.Datetime.now()
+                )
+                # This sends an internal message/notification to the author
+                book.message_post(
+                    body=notif_body,
+                    partner_ids=[book.author_id.id],
+                    subtype_xmlid='mail.mt_comment'
                 )
 
-                # Schedule Activity (Removed [:1])
-                record.activity_schedule(
-                    'mail.mail_activity_data_todo',
-                    summary=_('Review your release %s') % record.name,
+                # 5. Create Activity for the Author
+                book.activity_schedule(
+                    'mail.mail_activity_data_todo', # Activity Type: To Do
+                    summary=_('Review your release %s') % book.name,
                     note=_('Please review the book. It is ready for release.'),
-                    user_id=record.author_id.user_id.id or self.env.user.id,
-                    date_deadline=fields.Date.today() + timedelta(days=2)
+                    user_id=book.author_id.user_ids[0].id if book.author_id.user_ids else self.env.user.id,
+                    date_deadline=fields.Date.today() + timedelta(days=2) # 2 days after creation
                 )
-        return records
+        return books
