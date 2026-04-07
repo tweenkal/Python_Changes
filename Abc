@@ -1,63 +1,25 @@
-# -*- coding: utf-8 -*-
-from odoo import api, fields, models, _
-from datetime import timedelta
+def action_reservation_analysis(self):
+    """ Open the reserved book count inside graph view without domain key. """
+    return {
+        'name': _('Reservation Analysis'),
+        'type': 'ir.actions.act_window',
+        'res_model': 'book.reservation',
+        'view_mode': 'graph',
+        'target': 'current'
+    }
 
-class LibraryBook(models.Model):
-    _name = 'library.book'
-    _inherit = ['mail.thread', 'mail.activity.mixin'] # Task 1: Add Chatter to Model
-    _description = 'Library Book'
-
-    name = fields.Char(string='Book Name', required=True, tracking=True)
+def _read_group(self, domain, groupby=(), aggregates=(), having=(), offset=0, limit=None, order=None):
+    """ Injecting 'reserved' state domain inside the read_group method. """
     
-    # Relation with library.author model
-    author_id = fields.Many2one('library.author', string='Author', tracking=True)
+    # Domain check karke usme state filter add kar diya
+    domain = (domain or []) + [('state', '=', 'reserved')]
     
-    price = fields.Float(string='Price', tracking=True)
-    isbn = fields.Char(string='ISBN', tracking=True)
-
-    # Task 7: Unique Book Name per Author
-    _sql_constraints = [
-        ('unique_author_book', 'UNIQUE(name, author_id)',
-         'This author already has a book with the same name.')
-    ]
-
-    @api.model
-    def name_search(self, name='', domain=None, operator='ilike', limit=100):
-        domain = domain or []
-        if name:
-            domain = ['|', '|',
-                      ('name', operator, name),
-                      ('price', operator, name),
-                      ('isbn', operator, name)] + domain
-        return super(LibraryBook, self).name_search(name=name, domain=domain, operator=operator, limit=limit)
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        books = super(LibraryBook, self).create(vals_list)
-        for book in books:
-            # Task 3: Log Note on Creation
-            message = _("Book %s has been created by %s at %s.") % (
-                book.name, self.env.user.name, fields.Datetime.now())
-            book.message_post(body=message, subtype_xmlid='mail.mt_note')
-
-            if book.author_id:
-                # Task 4: Notification to Author (Using partner_id from author model)
-                notification_message = _(
-                    "Your book %s is released by %s at %s. Please review your book and let us know if any corrections are required.") % (
-                    book.name, self.env.user.name, fields.Datetime.now())
-                
-                book.message_post(
-                    body=notification_message,
-                    partner_ids=[book.author_id.partner_id.id],
-                    subtype_xmlid='mail.mt_comment'
-                )
-
-                # Task 5: Schedule Activity for Author (Using user_id from author model)
-                book.activity_schedule(
-                    'mail.mail_activity_data_todo',
-                    summary=_('Review your release %s Due Date: 2 days after the book record creation date.') % book.name,
-                    note=_('Please review the book. It is ready for release.'),
-                    user_id=book.author_id.user_id.id,
-                    date_deadline=fields.Date.today() + timedelta(days=2),
-                )
-        return books
+    return super()._read_group(
+        domain=domain, 
+        groupby=groupby, 
+        having=having, 
+        offset=offset, 
+        limit=limit, 
+        order=order, 
+        aggregates=aggregates
+    )
