@@ -1,224 +1,90 @@
-# -*- coding: utf-8 -*-
+from odoo import models, fields, api, _
+from odoo.osv import expression
 
-from odoo import fields, api, models, _
-from odoo.exceptions import ValidationError
+class BookReservation(models.Model):
+    _name = 'book.reservation'
+    _description = 'Library Book Reservation'
+    _rec_name = 'customer_id'
 
+    customer_id = fields.Many2one('author.author', string='Customer', required=True)
+    book_id = fields.Many2one('library.book', string='Book', required=True)
+    reservation_date = fields.Date(string='Reservation Date', default=fields.Date.context_today)
+    expected_pickup_date = fields.Date(string='Expected Pickup Date', required=True)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('reserved', 'Reserved'),
+        ('cancelled', 'Cancelled'),
+        ('picked_up', 'Picked Up')
+    ], string='Status', default='draft')
 
-class LibraryBook(models.Model):
-    _inherit = 'library.book'
+    # 3. Override compute_display_name
+    @api.depends('customer_id.name', 'customer_id.nationality')
+    def _compute_display_name(self):
+        for record in self:
+            name = record.customer_id.name or "Unknown"
+            nationality = record.customer_id.nationality or "N/A"
+            record.display_name = f"[{name}] - [{nationality}]"
 
-    product_count = fields.Integer(compute='_compute_product_count',
-        string='Product Count')
-
+    # 4. Override _name_search (Base Search Method)
     @api.model
-    def default_get(self, fields_list):
+    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
+        domain = domain or []
+        if name:
+            search_domain = [
+                '|', '|',
+                ('book_id.name', operator, name),
+                ('book_id.list_price', operator, name),
+                ('book_id.isbn', operator, name)
+            ]
+            domain = expression.AND([domain, search_domain])
+        return self._search(domain, limit=limit, order=order)
+
+    # 6. Override _search_fetch (Base Fetch Method)
+    @api.model
+    def _search_fetch(self, domain, field_names=None, offset=0, limit=None, order=None):
         """
-            Set default values for price and pages when creating a new book.
-            Args:
-                fields_list : List of requested field names.
-            Returns:
-                dict: Default values for the requested fields.
+        Base method override: Injecting custom domain logic 
+        before Odoo fetches the records.
         """
-        book = super().default_get(fields_list)
-        if 'price' in fields_list and not book.get('price'):
-            book['price'] = 500.0
-        if 'pages' in fields_list and not book.get('pages'):
-            book['pages'] = 100
-
-        return book
-
-    def _validate_book(self, vals, is_create=False):
-        """
-            Validate book values before create/write.
-            Args:
-                vals : Field values to validate.
-            Raises:
-                ValidationError:If category and edition is missing and pages
-                and price <= 0.
-        """
-        if 'category_id' in vals and not vals.get('category_id'):
-            raise ValidationError(_("Category must be selected."))
-
-        if is_create:
-            if not vals.get('edition_ids'):
-                raise ValidationError(_('Edition must be required'))
-        elif 'edition_ids' in vals:
-            raise ValidationError(_("You can't modify editions"))
-
-        pages = vals.get('pages', getattr(self, 'pages', 0))
-        price = vals.get('price', getattr(self, 'price', 0))
-
-        if pages <= 0:
-            raise ValidationError(_("Pages must be greater than 0."))
-        if price <= 0:
-            raise ValidationError(_("Price must be greater than 0."))
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        """
-            Create new library book records with validation.
-            Args:
-                vals_list : List of field values for each book.
-            Returns:
-                recordset: Created library.book records otherwise raises
-                ValidationError.
-        """
-        for vals in vals_list:
-            self._validate_book(vals, is_create=True)
-        return super().create(vals_list)
-
-    def write(self, vals):
-        """
-            Update library book records with validation.
-            Args:
-                vals : Field values to update.
-            Returns:
-                bool: True if update is successful otherwise raises
-                ValidationError.
-        """
-        self._validate_book(vals,is_create=False)
-        return super().write(vals)
-
-    def unlink(self):
-        """
-            Delete library book records and related author.book entries.
-            Returns:
-                bool: True if deletion is successful.
-        """
-        for book_record in self:
-            author_book = self.env['author.book']
-
-            author_record = author_book.search(
-                [('book_id', '=', book_record.id)])
-            author_record.unlink()
-
-        return super().unlink()
-
-    def copy(self, default=None):
-        """
-            Duplicate a library book record.
-            Args:
-                default : Values to override in the copy.
-            Returns:
-                recordset: The duplicated library.book record.
-        """
-        default = dict(default or {})
-        default['name'] = self.name + "(copy)"
-        return super().copy(default)
-
-
-    def _compute_product_count(self):
-        """
-            Compute number of product template linked to each book.
-            Args:
-                self : Library book record to compute product count.
-            Returns:
-                product_count : Number of product linked to each book.
-        """
-        for book in self:
-            book.product_count = self.env['product.product'].search_count([
-                ('product_tmpl_id.book_id', '=', book.id)
-            ])
-
-    def action_create_product(self):
-        """
-            create product template and variants based on book editions.
-            book category to product categories and generate varients for each
-            editions. show price and onhand quantity
-        """
-        edition_attribute = self.env.ref(
-            'ak_library_management_orm.product_attribute_editions')
-        stock_location = self.env.ref('stock.stock_location_stock')
-
-        for book in self:
-            parent = book.category_id.parent_id
-            parent_categ = parent and (
-                    self.env['product.category'].search(
-                        [('book_categ_id', '=', parent.id)], limit=1
-                    ) or self.env['product.category'].create({
-                'name': parent.name,
-                'book_categ_id': parent.id
-            }))
-
-            category = self.env['product.category'].search(
-                [('book_categ_id', '=', book.category_id.id)], limit=1
-            ) or self.env['product.category'].create({
-                'name': book.category_id.name,
-                'book_categ_id': book.category_id.id
-            })
-
-            category.parent_id = parent_categ.id if parent_categ else False
-
-            editions = {edition.name: edition for edition in book.edition_ids}
-            value_ids = []
-
-            for name in editions:
-                val = self.env['product.attribute.value'].search([
-                    ('name', '=', name),
-                    ('attribute_id', '=', edition_attribute.id)
-                ], limit=1) or self.env['product.attribute.value'].create({
-                    'name': name,
-                    'attribute_id': edition_attribute.id
-                })
-                value_ids.append(val.id)
-
-            total_price = sum(
-                edition.book_price for edition in editions.values())
-
-            product = self.env['product.template'].create({
-                'name': book.name,
-                'type': 'consu',
-                'is_book_product': True,
-                'is_storable': True,
-                'categ_id': category.id,
-                'book_id': book.id,
-                'list_price': total_price,
-                'attribute_line_ids': [(0, 0, {
-                    'attribute_id': edition_attribute.id,
-                    'value_ids': [(6, 0, value_ids)]
-                })]
-            })
-
-            for variant in product.product_variant_ids:
-                for attr in variant.product_template_attribute_value_ids:
-                    edition = editions.get(attr.name)
-                    if not edition:
-                        continue
-
-                    attr.price_extra = edition.book_price - total_price
-
-                    self.env['stock.quant'].create({
-                        'product_id': variant.id,
-                        'location_id': stock_location.id,
-                        'quantity': edition.quantity
-                    })
-
-    def action_view_product(self):
-        """
-            Open the product form view or list view.
-            Args:
-                self : Library book record to open the product form.
-            Returns:
-                Dict : Action Dictionary to open the product view.
-        """
-        self.ensure_one()
-        products = self.env['product.product'].search(
-            [('product_tmpl_id.book_id', '=', self.id)]
+        # Example logic: Force it to only fetch active-like reservations or modify domain
+        # result = super()._search_fetch(domain, field_names, offset, limit, order)
+        
+        return super(BookReservation, self)._search_fetch(
+            domain=domain, 
+            field_names=field_names, 
+            offset=offset, 
+            limit=limit, 
+            order=order
         )
 
-        if len(products) == 1:
-            return {
-                'name': 'Product',
-                'type': 'ir.actions.act_window',
-                'res_model': 'product.product',
-                'view_mode': 'form',
-                'res_id': products.id,
-            }
-        else:
-            return {
-                'name': 'Products',
-                'type': 'ir.actions.act_window',
-                'res_model': 'product.product',
-                'view_mode': 'list,form',
-                'domain': [('id', 'in', products.ids)],
-            }
+    # 5. Reservation Analysis Method
+    def action_reservation_analysis(self):
+        return {
+            'name': _('Reservation Analysis'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'graph,tree',
+            'domain': [('state', '=', 'reserved')],
+            'context': {'search_default_group_by_book_id': 1},
+        }
+
+class AuthorAuthor(models.Model):
+    _inherit = 'author.author'
+
+    # Smart Button Method using the overridden search_fetch logic
+    def action_view_customer_reservations(self):
+        self.ensure_one()
+        # This call will trigger the _search_fetch override in book.reservation
+        reservations = self.env['book.reservation'].search_fetch(
+            [('customer_id', '=', self.id), ('state', '=', 'reserved')],
+            ['customer_id', 'book_id', 'state']
+        )
+        
+        return {
+            'name': _('Reservations'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', reservations.ids)],
+            'target': 'current',
+        }
