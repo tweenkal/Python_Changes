@@ -18,3 +18,47 @@
                 ('state', '=', 'reserved')
             ],
         )
+
+from odoo import models, fields
+
+class ResPartner(models.Model):
+    _inherit = 'res.partner'
+
+    reservation_count = fields.Integer(
+        compute="_compute_reservation_count"
+    )
+
+    # ✅ Override search_fetch
+    def search_fetch(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        domain = domain or []
+
+        # Inject required domain here
+        domain += [('state', '=', 'reserved')]
+
+        return super().search_fetch(domain, fields, offset=offset, limit=limit, order=order)
+
+
+    def _compute_reservation_count(self):
+        for rec in self:
+            reservations = self.env['book.reservation'].search_fetch(
+                [('customer_id', '=', rec.id)],
+                ['id']
+            )
+            rec.reservation_count = len(reservations)
+
+
+    def action_view_reservation(self):
+        self.ensure_one()
+
+        reservations = self.env['book.reservation'].search_fetch(
+            [('customer_id', '=', self.id)],
+            ['id']
+        )
+
+        return {
+            'name': 'Reservations',
+            'type': 'ir.actions.act_window',
+            'res_model': 'book.reservation',
+            'view_mode': 'list,form',
+            'res_ids': reservations.ids,   # ✅ no domain here
+        }
