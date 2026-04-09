@@ -1,52 +1,129 @@
-    def action_reservation_analysis(self):
-        # ... (aapka existing code)
-        return {
-            'name': _('Reservation Analysis'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'graph',
-            'domain': [('state', '=', 'reserved')],
-            'target': 'current'
-        }
+# -*- coding: utf-8 -*-
 
-    def _read_group(self, domain, groupby, aggregates, having=None, offset=0, limit=None, order=None):
-        """
-        Base _read_group method ko override kiya gaya hai.
-        """
-        # Yahan aap apna custom logic likh sakte hain results modify karne ke liye
-        res = super(BookReservation, self)._read_group(
-            domain=domain, 
-            groupby=groupby, 
-            aggregates=aggregates, 
-            having=having, 
-            offset=offset, 
-            limit=limit, 
-            order=order
-        )
-        return res
+from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError
+from datetime import timedelta
 
-    def action_view_reservation(self):
-        # ... (aapka existing action code)
-        self.ensure_one()
-        reservation = self.env['book.reservation'].search_fetch(
-            domain=[('customer_id', '=', self.id), ('state', '=', 'reserved')]
-        )
-        # ... (rest of the action code)
+
+class LibraryBook(models.Model):
+    _inherit = ['library.book', 'mail.thread', 'mail.activity.mixin']
+
+    name = fields.Char(
+        string='Book Name',
+        required=True,
+        tracking=True
+    )
+
+    # ✅ Add author user field (required)
+    author_user_id = fields.Many2one(
+        'res.users',
+        string="Author User",
+        required=True
+    )
+
+    # ✅ FIXED constraint (correct syntax)
+    _sql_constraints = [
+        ('unique_author_book',
+         'unique(name, author_id)',
+         'This author already has a book with the same name.')
+    ]
+
+    @api.constrains('name', 'author_id')
+    def _check_unique_author_book(self):
+        for rec in self:
+            domain = [
+                ('name', '=', rec.name),
+                ('author_id', '=', rec.author_id.id),
+                ('id', '!=', rec.id)
+            ]
+            if self.search_count(domain):
+                raise ValidationError(
+                    _('This author already has a book with the same name.')
+                )
 
     @api.model
-    def _search_fetch(self, domain, field_names=None, offset=0, limit=None, order=None):
-        """
-        search_fetch ki internal method (_search_fetch) ko override kiya gaya hai.
-        """
-        # Yahan aap domain ya limit ko modify kar sakte hain
-        # For example: domain += [('active', '=', True)]
-        
-        result = super(ResPartner, self)._search_fetch(
-            domain=domain, 
-            field_names=field_names, 
-            offset=offset, 
-            limit=limit, 
-            order=order
+    def name_search(self, name='', domain=None, operator='ilike', limit=100):
+        domain = domain or []
+        if name:
+            domain = ['|', '|',
+                      ('name', operator, name),
+                      ('price', operator, name),
+                      ('isbn', operator, name)] + domain
+
+        return super().name_search(
+            name=name,
+            domain=domain,
+            operator=operator,
+            limit=limit
         )
-        
-        return result
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        books = super().create(vals_list)
+
+        for book in books:
+
+            # ✅ Ensure author user exists
+            if not book.author_user_id and book.author_id:
+                if book.author_id.user_id:
+                    book.author_user_id = book.author_id.user_id.id
+                else:
+                    new_user = self.env['res.users'].create({
+                        'name': book.author_id.name,
+                        'login': book.author_id.email or book.author_id.name.replace(" ", "").lower(),
+                    })
+                    book.author_user_id = new_user.id
+
+            # ✅ Log message
+            message = _(
+                "Book %s has been created by %s at %s."
+            ) % (
+                book.name,
+                self.env.user.name,
+                fields.Datetime.now()
+            )
+
+            book.message_post(
+                body=message,
+                subtype_xmlid='mail.mt_note'
+            )
+
+            if book.author_id:
+
+                notification_message = _(
+                    "Your book %s is released by %s at %s. Please "
+                    "review your book and let us know if any corrections are "
+                    "required."
+                ) % (
+                    book.name,
+                    self.env.user.name,
+                    fields.Datetime.now()
+                )
+
+                # ✅ REPLACED bus.bus with Odoo 19 notification
+                if book.author_user_id:
+                    book.author_user_id.notify_success(
+                        message=notification_message
+                    )
+
+                # ✅ Message to author
+                book.message_post(
+                    body=notification_message,
+                    partner_ids=[book.author_id.id],
+                    subtype_xmlid='mail.mt_comment'
+                )
+
+                # ✅ Activity
+                book.activity_schedule(
+                    'mail.mail_activity_data_todo',
+                    summary=_(
+                        'Review your release %s'
+                    ) % book.name,
+                    note=_(
+                        'Please review the book. It is ready for release.'
+                    ),
+                    user_id=book.author_user_id.id,
+                    date_deadline=fields.Date.today() + timedelta(days=2),
+                )
+
+        return books
