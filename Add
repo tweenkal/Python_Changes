@@ -1,29 +1,45 @@
-def action_book_order_wizard(self):
-    self.ensure_one()
+from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
+from datetime import timedelta
 
-    for wizard_line in self.line_ids:
-        if not wizard_line.product_id or wizard_line.quantity <= 0:
-            raise ValidationError(
-                _("Each line must have a product selected and Quantity "
-                  "must be greater than zero : %s") %
-                (wizard_line.product_id.display_name or "No Product")
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
+    name = fields.Char(string="Book Name", required=True, tracking=True)
+    # Assuming author is a Res Partner; author_user_id is the linked User
+    author_id = fields.Many2one('res.partner', string="Author", required=True)
+    author_user_id = fields.Many2one('res.users', string="Author User", required=True)
+
+    _sql_constraints = [
+        ('unique_author_book', 'unique(name, author_id)', 'This author already has a book with the same name.')
+    ]
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        books = super(LibraryBook, self).create(vals_list)
+        
+        for book in books:
+            # 1. Log Note on Book Creation
+            log_message = _("Book %s has been created by %s at %s") % (
+                book.name, self.env.user.name, fields.Datetime.now()
             )
+            book.message_post(body=log_message, subtype_xmlid='mail.mt_note')
 
-        # Loop through existing sale order lines
-        for so_line in self.sale_order_id.order_line:
-            if so_line.product_id.id == wizard_line.product_id.id:
-                # Product exists → update quantity (edit)
-                so_line.product_uom_qty = wizard_line.quantity
-                break  # Exit loop after updating first match
-        else:
-            # If for-loop completes without break → create new sale order line
-            self.env['sale.order.line'].create({
-                'order_id': self.sale_order_id.id,
-                'product_id': wizard_line.product_id.id,
-                'product_uom_qty': wizard_line.quantity,
-            })
+            # 2. Send Notification to Author
+            notification_message = _("Your book %s is released by %s at %s. Please review your book and let us know if any corrections are required.") % (
+                book.name, book.author_user_id.name, fields.Datetime.now()
+            )
+            book.author_user_id.notify_info(message=notification_message, title="Book Released", sticky=True)
 
-    # Mark that books have been added
-    self.sale_order_id.has_book_added = True
-
-    return {'type': 'ir.actions.act_window_close'}
+            # 3. Create Activity for Author
+            book.activity_schedule(
+                'mail.mail_activity_data_todo',
+                summary=_("Review your release %s") % book.name,
+                note=_("Please review the book. It is ready for release."),
+                user_id=book.author_user_id.id,
+                date_deadline=fields.Date.today() + timedelta(days=2)
+            )
+            
+        return books
