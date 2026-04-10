@@ -1,90 +1,13 @@
-from odoo import models, fields, api, _
-from odoo.osv import expression
+<record id="group_library_staff" model="res.groups">
+    <field name="name">Library Staff</field>
+</record>
 
-class BookReservation(models.Model):
-    _name = 'book.reservation'
-    _description = 'Library Book Reservation'
-    _rec_name = 'customer_id'
+<record id="group_librarian" model="res.groups">
+    <field name="name">Librarian</field>
+    <field name="implied_ids" eval="[(4, ref('group_library_staff'))]"/>
+</record>
 
-    customer_id = fields.Many2one('author.author', string='Customer', required=True)
-    book_id = fields.Many2one('library.book', string='Book', required=True)
-    reservation_date = fields.Date(string='Reservation Date', default=fields.Date.context_today)
-    expected_pickup_date = fields.Date(string='Expected Pickup Date', required=True)
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('reserved', 'Reserved'),
-        ('cancelled', 'Cancelled'),
-        ('picked_up', 'Picked Up')
-    ], string='Status', default='draft')
-
-    # 3. Override compute_display_name
-    @api.depends('customer_id.name', 'customer_id.nationality')
-    def _compute_display_name(self):
-        for record in self:
-            name = record.customer_id.name or "Unknown"
-            nationality = record.customer_id.nationality or "N/A"
-            record.display_name = f"[{name}] - [{nationality}]"
-
-    # 4. Override _name_search (Base Search Method)
-    @api.model
-    def _name_search(self, name, domain=None, operator='ilike', limit=None, order=None):
-        domain = domain or []
-        if name:
-            search_domain = [
-                '|', '|',
-                ('book_id.name', operator, name),
-                ('book_id.list_price', operator, name),
-                ('book_id.isbn', operator, name)
-            ]
-            domain = expression.AND([domain, search_domain])
-        return self._search(domain, limit=limit, order=order)
-
-    # 6. Override _search_fetch (Base Fetch Method)
-    @api.model
-    def _search_fetch(self, domain, field_names=None, offset=0, limit=None, order=None):
-        """
-        Base method override: Injecting custom domain logic 
-        before Odoo fetches the records.
-        """
-        # Example logic: Force it to only fetch active-like reservations or modify domain
-        # result = super()._search_fetch(domain, field_names, offset, limit, order)
-        
-        return super(BookReservation, self)._search_fetch(
-            domain=domain, 
-            field_names=field_names, 
-            offset=offset, 
-            limit=limit, 
-            order=order
-        )
-
-    # 5. Reservation Analysis Method
-    def action_reservation_analysis(self):
-        return {
-            'name': _('Reservation Analysis'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'graph,tree',
-            'domain': [('state', '=', 'reserved')],
-            'context': {'search_default_group_by_book_id': 1},
-        }
-
-class AuthorAuthor(models.Model):
-    _inherit = 'author.author'
-
-    # Smart Button Method using the overridden search_fetch logic
-    def action_view_customer_reservations(self):
-        self.ensure_one()
-        # This call will trigger the _search_fetch override in book.reservation
-        reservations = self.env['book.reservation'].search_fetch(
-            [('customer_id', '=', self.id), ('state', '=', 'reserved')],
-            ['customer_id', 'book_id', 'state']
-        )
-        
-        return {
-            'name': _('Reservations'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'list,form',
-            'domain': [('id', 'in', reservations.ids)],
-            'target': 'current',
-        }
+<record id="group_library_manager" model="res.groups">
+    <field name="name">Library Manager</field>
+    <field name="implied_ids" eval="[(4, ref('group_librarian'))]"/>
+</record>
