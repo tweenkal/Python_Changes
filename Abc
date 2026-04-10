@@ -1,95 +1,127 @@
-    def action_view_reservation(self):
-        self.ensure_one()
+# __manifest__.py
+{
+    'name': 'Library Security Management',
+    'version': '1.0',
+    'depends': ['base'],
+    'data': [
+        'security/library_security.xml',
+        'security/ir.model.access.csv',
+        'views/book_views.xml',
+    ],
+}
 
-        reservations = self._search_fetch_reservations()
-
-        return {
-            'name': 'Reservations',
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'list,form',
-            'res_ids': reservations.ids,
-        }
-
-    def _search_fetch_reservations(self):
-        return self.env['book.reservation'].search_fetch(
-            [
-                ('customer_id', '=', self.id),
-                ('state', '=', 'reserved')
-            ],
-        )
-
+# models/book.py
 from odoo import models, fields
 
-class ResPartner(models.Model):
-    _inherit = 'res.partner'
+class LibraryBook(models.Model):
+    _name = 'library.book'
+    _description = 'Library Book'
 
-    reservation_count = fields.Integer(
-        compute="_compute_reservation_count"
-    )
+    name = fields.Char(required=True)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('published', 'Published')
+    ], default='draft')
 
-    # ✅ Override search_fetch
-    def search_fetch(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        domain = domain or []
+    create_uid = fields.Many2one('res.users', string="Created By", readonly=True)
+    create_date = fields.Datetime(string="Created Date", readonly=True)
+    write_uid = fields.Many2one('res.users', string="Last Updated By", readonly=True)
+    write_date = fields.Datetime(string="Last Updated Date", readonly=True)
 
-        # Inject required domain here
-        domain += [('state', '=', 'reserved')]
+# security/library_security.xml
+<odoo>
+    <!-- Groups -->
+    <record id="group_library_manager" model="res.groups">
+        <field name="name">Library Manager</field>
+    </record>
 
-        return super().search_fetch(domain, fields, offset=offset, limit=limit, order=order)
+    <record id="group_librarian" model="res.groups">
+        <field name="name">Librarian</field>
+        <field name="implied_ids" eval="[(4, ref('group_library_staff'))]"/>
+    </record>
 
+    <record id="group_library_staff" model="res.groups">
+        <field name="name">Library Staff</field>
+    </record>
 
-    def _compute_reservation_count(self):
-        for rec in self:
-            reservations = self.env['book.reservation'].search_fetch(
-                [('customer_id', '=', rec.id)],
-                ['id']
-            )
-            rec.reservation_count = len(reservations)
+    <!-- Record Rule: Librarian sees only own records -->
+    <record id="rule_librarian_own_books" model="ir.rule">
+        <field name="name">Librarian Own Books</field>
+        <field name="model_id" ref="model_library_book"/>
+        <field name="groups" eval="[(4, ref('group_librarian'))]"/>
+        <field name="domain_force">[('create_uid','=',user.id)]</field>
+    </record>
 
+    <!-- Record Rule: Staff cannot see draft -->
+    <record id="rule_staff_no_draft" model="ir.rule">
+        <field name="name">Staff No Draft Books</field>
+        <field name="model_id" ref="model_library_book"/>
+        <field name="groups" eval="[(4, ref('group_library_staff'))]"/>
+        <field name="domain_force">[('state','!=','draft')]</field>
+    </record>
+</odoo>
 
-    def action_view_reservation(self):
-        self.ensure_one()
+# security/ir.model.access.csv
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_staff,access.staff,model_library_book,group_library_staff,1,0,0,0
+access_librarian,access.librarian,model_library_book,group_librarian,1,1,1,0
+access_manager,access.manager,model_library_book,group_library_manager,1,1,1,1
 
-        reservations = self.env['book.reservation'].search_fetch(
-            [('customer_id', '=', self.id)],
-            ['id']
-        )
+# views/book_views.xml
+<odoo>
+    <record id="view_book_form" model="ir.ui.view">
+        <field name="name">library.book.form</field>
+        <field name="model">library.book</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="state" groups="group_librarian,group_library_manager"/>
+                    </group>
 
-        return {
-            'name': 'Reservations',
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'list,form',
-            'res_ids': reservations.ids,   # ✅ no domain here
-        }
+                    <group string="Audit Info" groups="group_library_manager">
+                        <field name="create_uid"/>
+                        <field name="create_date"/>
+                        <field name="write_uid"/>
+                        <field name="write_date"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
 
+    <record id="view_book_tree" model="ir.ui.view">
+        <field name="name">library.book.tree</field>
+        <field name="model">library.book</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
 
-from odoo import models
+    <!-- Action -->
+    <record id="action_books" model="ir.actions.act_window">
+        <field name="name">Books</field>
+        <field name="res_model">library.book</field>
+        <field name="view_mode">tree,form</field>
+    </record>
 
-class ResPartner(models.Model):
-    _inherit = 'res.partner'
+    <!-- Menu -->
+    <menuitem id="menu_library_root" name="Library"/>
 
-    # ✅ Override search_fetch
-    def search_fetch(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        domain = domain or []
+    <menuitem id="menu_books" name="Books" parent="menu_library_root" action="action_books"/>
 
-        # Inject required domain
-        domain += [
-            ('customer_id', '=', self.id),
-            ('state', '=', 'reserved')
-        ]
+    <!-- Edition Menu only for Librarian & Manager -->
+    <menuitem id="menu_book_edit" name="Edition"
+              parent="menu_library_root"
+              groups="group_librarian,group_library_manager"/>
+</odoo>
 
-        return super().search_fetch(domain, fields, offset=offset, limit=limit, order=order)
+# __init__.py
+from . import models
 
-
-    def action_view_reservation(self):
-        self.ensure_one()
-
-        return {
-            'name': 'Reservations',
-            'type': 'ir.actions.act_window',
-            'res_model': 'book.reservation',
-            'view_mode': 'list,form',
-            # ❌ no domain
-            # ❌ no search_fetch
-        }
+# models/__init__.py
+from . import book
