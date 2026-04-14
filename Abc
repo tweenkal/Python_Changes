@@ -1,127 +1,38 @@
-# __manifest__.py
-{
-    'name': 'Library Security Management',
-    'version': '1.0',
-    'depends': ['base'],
-    'data': [
-        'security/library_security.xml',
-        'security/ir.model.access.csv',
-        'views/book_views.xml',
-    ],
-}
-
-# models/book.py
-from odoo import models, fields
-
-class LibraryBook(models.Model):
-    _name = 'library.book'
-    _description = 'Library Book'
-
-    name = fields.Char(required=True)
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('published', 'Published')
-    ], default='draft')
-
-    create_uid = fields.Many2one('res.users', string="Created By", readonly=True)
-    create_date = fields.Datetime(string="Created Date", readonly=True)
-    write_uid = fields.Many2one('res.users', string="Last Updated By", readonly=True)
-    write_date = fields.Datetime(string="Last Updated Date", readonly=True)
-
-# security/library_security.xml
 <odoo>
-    <!-- Groups -->
-    <record id="group_library_manager" model="res.groups">
-        <field name="name">Library Manager</field>
-    </record>
+    <record id="auto_action_reservation_confirmed" model="base.automation">
+        
+        <!-- Name -->
+        <field name="name">Reservation Confirmation Message</field>
 
-    <record id="group_librarian" model="res.groups">
-        <field name="name">Librarian</field>
-        <field name="implied_ids" eval="[(4, ref('group_library_staff'))]"/>
-    </record>
+        <!-- Model -->
+        <field name="model_id" ref="model_book_reservation"/>
 
-    <record id="group_library_staff" model="res.groups">
-        <field name="name">Library Staff</field>
-    </record>
+        <!-- Trigger: On Save -->
+        <field name="trigger">on_write</field>
 
-    <!-- Record Rule: Librarian sees only own records -->
-    <record id="rule_librarian_own_books" model="ir.rule">
-        <field name="name">Librarian Own Books</field>
-        <field name="model_id" ref="model_library_book"/>
-        <field name="groups" eval="[(4, ref('group_librarian'))]"/>
-        <field name="domain_force">[('create_uid','=',user.id)]</field>
-    </record>
+        <!-- Trigger ONLY when state field changes -->
+        <field name="trigger_field_ids" eval="[(4, ref('ak_library_search_domain.field_book_reservation__state'))]"/>
 
-    <!-- Record Rule: Staff cannot see draft -->
-    <record id="rule_staff_no_draft" model="ir.rule">
-        <field name="name">Staff No Draft Books</field>
-        <field name="model_id" ref="model_library_book"/>
-        <field name="groups" eval="[(4, ref('group_library_staff'))]"/>
-        <field name="domain_force">[('state','!=','draft')]</field>
+        <!-- Condition -->
+        <field name="filter_domain">[('state','=','reserved')]</field>
+
+        <!-- Action Type -->
+        <field name="state">code</field>
+
+        <!-- Python Code -->
+        <field name="code">
+if record.state == 'reserved':
+    record.message_post(
+        body=f"""
+        &lt;b&gt;Reservation Confirmed&lt;/b&gt;&lt;br/&gt;
+        Customer: {record.partner_id.name}&lt;br/&gt;
+        Pickup Before: {record.expected_pickup_date}
+        """
+    )
+        </field>
+
+        <!-- Active -->
+        <field name="active">True</field>
+
     </record>
 </odoo>
-
-# security/ir.model.access.csv
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_staff,access.staff,model_library_book,group_library_staff,1,0,0,0
-access_librarian,access.librarian,model_library_book,group_librarian,1,1,1,0
-access_manager,access.manager,model_library_book,group_library_manager,1,1,1,1
-
-# views/book_views.xml
-<odoo>
-    <record id="view_book_form" model="ir.ui.view">
-        <field name="name">library.book.form</field>
-        <field name="model">library.book</field>
-        <field name="arch" type="xml">
-            <form>
-                <sheet>
-                    <group>
-                        <field name="name"/>
-                        <field name="state" groups="group_librarian,group_library_manager"/>
-                    </group>
-
-                    <group string="Audit Info" groups="group_library_manager">
-                        <field name="create_uid"/>
-                        <field name="create_date"/>
-                        <field name="write_uid"/>
-                        <field name="write_date"/>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-
-    <record id="view_book_tree" model="ir.ui.view">
-        <field name="name">library.book.tree</field>
-        <field name="model">library.book</field>
-        <field name="arch" type="xml">
-            <tree>
-                <field name="name"/>
-                <field name="state"/>
-            </tree>
-        </field>
-    </record>
-
-    <!-- Action -->
-    <record id="action_books" model="ir.actions.act_window">
-        <field name="name">Books</field>
-        <field name="res_model">library.book</field>
-        <field name="view_mode">tree,form</field>
-    </record>
-
-    <!-- Menu -->
-    <menuitem id="menu_library_root" name="Library"/>
-
-    <menuitem id="menu_books" name="Books" parent="menu_library_root" action="action_books"/>
-
-    <!-- Edition Menu only for Librarian & Manager -->
-    <menuitem id="menu_book_edit" name="Edition"
-              parent="menu_library_root"
-              groups="group_librarian,group_library_manager"/>
-</odoo>
-
-# __init__.py
-from . import models
-
-# models/__init__.py
-from . import book
