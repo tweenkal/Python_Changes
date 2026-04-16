@@ -1,129 +1,43 @@
-# -*- coding: utf-8 -*-
+<odoo>
 
-from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
-from datetime import timedelta
+    <template id="custom_external_layout" inherit_id="web.external_layout">
 
+        <!-- HEADER -->
+        <xpath expr="//div[@class='header']" position="replace">
+            <div class="header" style="border-bottom:1px solid #000; padding:10px;">
+                <div class="row">
+                    
+                    <div class="col-6">
+                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:60px;"/>
+                    </div>
 
-class LibraryBook(models.Model):
-    _inherit = ['library.book', 'mail.thread', 'mail.activity.mixin']
+                    <div class="col-6 text-end">
+                        <div t-esc="company.partner_id.contact_address"/>
+                        <div t-esc="company.email"/>
+                        <div t-esc="company.phone"/>
+                    </div>
 
-    name = fields.Char(
-        string='Book Name',
-        required=True,
-        tracking=True
-    )
+                </div>
+            </div>
+        </xpath>
 
-    # ✅ Add author user field (required)
-    author_user_id = fields.Many2one(
-        'res.users',
-        string="Author User",
-        required=True
-    )
+        <!-- FOOTER -->
+        <xpath expr="//div[@class='footer']" position="replace">
+            <div class="footer" style="border-top:1px solid #000; padding:10px;">
+                <div class="row">
 
-    # ✅ FIXED constraint (correct syntax)
-    _sql_constraints = [
-        ('unique_author_book',
-         'unique(name, author_id)',
-         'This author already has a book with the same name.')
-    ]
+                    <div class="col-6">
+                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:40px;"/>
+                    </div>
 
-    @api.constrains('name', 'author_id')
-    def _check_unique_author_book(self):
-        for rec in self:
-            domain = [
-                ('name', '=', rec.name),
-                ('author_id', '=', rec.author_id.id),
-                ('id', '!=', rec.id)
-            ]
-            if self.search_count(domain):
-                raise ValidationError(
-                    _('This author already has a book with the same name.')
-                )
+                    <div class="col-6 text-end">
+                        Page: <span class="page"/> / <span class="topage"/>
+                    </div>
 
-    @api.model
-    def name_search(self, name='', domain=None, operator='ilike', limit=100):
-        domain = domain or []
-        if name:
-            domain = ['|', '|',
-                      ('name', operator, name),
-                      ('price', operator, name),
-                      ('isbn', operator, name)] + domain
+                </div>
+            </div>
+        </xpath>
 
-        return super().name_search(
-            name=name,
-            domain=domain,
-            operator=operator,
-            limit=limit
-        )
+    </template>
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        books = super().create(vals_list)
-
-        for book in books:
-
-            # ✅ Ensure author user exists
-            if not book.author_user_id and book.author_id:
-                if book.author_id.user_id:
-                    book.author_user_id = book.author_id.user_id.id
-                else:
-                    new_user = self.env['res.users'].create({
-                        'name': book.author_id.name,
-                        'login': book.author_id.email or book.author_id.name.replace(" ", "").lower(),
-                    })
-                    book.author_user_id = new_user.id
-
-            # ✅ Log message
-            message = _(
-                "Book %s has been created by %s at %s."
-            ) % (
-                book.name,
-                self.env.user.name,
-                fields.Datetime.now()
-            )
-
-            book.message_post(
-                body=message,
-                subtype_xmlid='mail.mt_note'
-            )
-
-            if book.author_id:
-
-                notification_message = _(
-                    "Your book %s is released by %s at %s. Please "
-                    "review your book and let us know if any corrections are "
-                    "required."
-                ) % (
-                    book.name,
-                    self.env.user.name,
-                    fields.Datetime.now()
-                )
-
-                # ✅ REPLACED bus.bus with Odoo 19 notification
-                if book.author_user_id:
-                    book.author_user_id.notify_success(
-                        message=notification_message
-                    )
-
-                # ✅ Message to author
-                book.message_post(
-                    body=notification_message,
-                    partner_ids=[book.author_id.id],
-                    subtype_xmlid='mail.mt_comment'
-                )
-
-                # ✅ Activity
-                book.activity_schedule(
-                    'mail.mail_activity_data_todo',
-                    summary=_(
-                        'Review your release %s'
-                    ) % book.name,
-                    note=_(
-                        'Please review the book. It is ready for release.'
-                    ),
-                    user_id=book.author_user_id.id,
-                    date_deadline=fields.Date.today() + timedelta(days=2),
-                )
-
-        return books
+</odoo>
