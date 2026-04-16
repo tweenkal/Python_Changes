@@ -1,38 +1,99 @@
 <odoo>
-    <record id="auto_action_reservation_confirmed" model="base.automation">
-        
-        <!-- Name -->
-        <field name="name">Reservation Confirmation Message</field>
+    <!-- Main Report Template -->
+    <template id="report_author_document">
 
-        <!-- Model -->
-        <field name="model_id" ref="model_book_reservation"/>
+        <t t-call="web.external_layout">
+            <div class="page">
 
-        <!-- Trigger: On Save -->
-        <field name="trigger">on_write</field>
+                <!-- ================= HEADER ================= -->
+                <div class="row" style="border:1px solid #000; padding:10px; margin-bottom:20px;">
+                    
+                    <!-- Left: Logo + Company -->
+                    <div class="col-6">
+                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:80px;"/>
+                        <div>
+                            <strong t-esc="company.name"/>
+                            <br/>
+                            <span t-esc="company.country_id.name"/>
+                        </div>
+                    </div>
 
-        <!-- Trigger ONLY when state field changes -->
-        <field name="trigger_field_ids" eval="[(4, ref('ak_library_search_domain.field_book_reservation__state'))]"/>
+                    <!-- Right: Company Info -->
+                    <div class="col-6 text-end">
+                        <div t-esc="company.partner_id.contact_address"/>
+                        <div>Email: <span t-esc="company.email"/></div>
+                        <div>Phone: <span t-esc="company.phone"/></div>
+                    </div>
 
-        <!-- Condition -->
-        <field name="filter_domain">[('state','=','reserved')]</field>
+                </div>
 
-        <!-- Action Type -->
-        <field name="state">code</field>
+                <!-- ================= AUTHOR INFO ================= -->
+                <t t-foreach="docs" t-as="o">
 
-        <!-- Python Code -->
-        <field name="code">
-if record.state == 'reserved':
-    record.message_post(
-        body=f"""
-        &lt;b&gt;Reservation Confirmed&lt;/b&gt;&lt;br/&gt;
-        Customer: {record.partner_id.name}&lt;br/&gt;
-        Pickup Before: {record.expected_pickup_date}
-        """
-    )
-        </field>
+                    <div style="border:1px solid #000; padding:10px; margin-bottom:20px;">
+                        
+                        <h4>Author Information</h4>
 
-        <!-- Active -->
-        <field name="active">True</field>
+                        <p><strong>Name:</strong> <span t-esc="o.name"/></p>
+                        <p><strong>Gender:</strong> <span t-esc="o.gender"/></p>
+                        <p><strong>Country:</strong> <span t-esc="o.country_id.name"/></p>
 
-    </record>
+                        <t t-if="o.email">
+                            <p><strong>Email:</strong> <span t-esc="o.email"/></p>
+                        </t>
+
+                        <p><strong>Phone:</strong> <span t-esc="o.phone"/></p>
+
+                    </div>
+
+                    <!-- ================= BOOK TABLE ================= -->
+                    <div style="border:1px solid #000; padding:10px;">
+
+                        <h4>Books Written</h4>
+
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Book Name</th>
+                                    <th>ISBN</th>
+                                    <th>Publish Date</th>
+                                    <th>Pages</th>
+                                    <th>Price</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <tr t-foreach="o.book_ids" t-as="book">
+                                    <td><span t-esc="book.name"/></td>
+
+                                    <td>
+                                        <t t-if="book.isbn">
+                                            <span t-esc="book.isbn"/>
+                                        </t>
+                                    </td>
+
+                                    <td>
+                                        <span t-esc="book.publish_date"/>
+                                    </td>
+
+                                    <td>
+                                        <t t-if="book.pages">
+                                            <span t-esc="book.pages"/>
+                                        </t>
+                                    </td>
+
+                                    <td>
+                                        <span t-esc="book.price"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+
+                </t>
+
+            </div>
+        </t>
+    </template>
 </odoo>
