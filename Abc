@@ -1,99 +1,150 @@
 <odoo>
-    <!-- Main Report Template -->
-    <template id="report_author_document">
+    <template id="report_author_template">
 
-        <t t-call="web.external_layout">
-            <div class="page">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
 
-                <!-- ================= HEADER ================= -->
-                <div class="row" style="border:1px solid #000; padding:10px; margin-bottom:20px;">
-                    
-                    <!-- Left: Logo + Company -->
-                    <div class="col-6">
-                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:80px;"/>
-                        <div>
-                            <strong t-esc="company.name"/>
-                            <br/>
-                            <span t-esc="company.country_id.name"/>
+                <t t-set="company" t-value="env.company"/>
+
+                <div class="page" style="padding:20px 30px;">
+
+                    <div class="header" style="width:100%; margin-bottom:20px;">
+
+                        <div style="float:left; width:50%;">
+                            <img t-if="company.id"
+                                 t-att-src="'/web/image/res.company/%s/logo' % company.id"
+                                 style="height:60px;"/>
+                        </div>
+
+                        <div style="float:right; width:50%; text-align:right; font-size:13px;">
+                            <div>
+                                <b>Address:</b>
+                                <span t-esc="company.partner_id.street or ''"/>
+                                <span t-esc="company.partner_id.city or ''"/>
+                                <span t-esc="company.partner_id.country_id.name or ''"/>
+                            </div>
+
+                            <div>
+                                <b>Email:</b>
+                                <span t-esc="company.email or ''"/>
+                            </div>
+
+                            <div>
+                                <b>Phone:</b>
+                                <span t-esc="company.phone or ''"/>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Right: Company Info -->
-                    <div class="col-6 text-end">
-                        <div t-esc="company.partner_id.contact_address"/>
-                        <div>Email: <span t-esc="company.email"/></div>
-                        <div>Phone: <span t-esc="company.phone"/></div>
+                    <div style="margin-top:50px; margin-bottom:25px;">
+                        <span style="font-size:30px; font-weight:bold; color:#6A3F5B;">Author # </span>
+                        <span style="font-size:30px; color:#6A3F5B;" t-esc="doc.name"/>
                     </div>
+
+                    <div style="margin-bottom:20px; font-size:15px;">
+                        <b>Gender : </b><span t-esc="doc.gender"/><br/><br/>
+                        <b>Nationality : </b> <span
+                            t-esc="doc.nationality"/><br/><br/>
+                        <b>Email : </b><span
+                            t-esc="doc.email or ''"/><br/><br/>
+                        <b>Phone : </b><span t-esc="doc.phone or ''"/>
+                    </div>
+
+                    <table width="100%"
+                           style="border-collapse:collapse; margin-top:50px; font-size:14px;">
+
+                    <thead>
+                        <tr style="background-color:#F5F5F5;">
+                            <th style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:left;">Book Name</th>
+                            <th style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:left;">ISBN</th>
+                            <th style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:left;">Publish Date</th>
+                            <th style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:right;">Pages</th>
+                            <th style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:right;">Price</th>
+                        </tr>
+                    </thead>
+
+                    <!-- BODY -->
+                    <tbody>
+                        <tr t-foreach="doc.book_ids" t-as="book">
+
+                            <td style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px;">
+                                <span t-esc="book.book_id.name"/>
+                            </td>
+
+                            <td style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px;">
+                                <span t-esc="book.isbn"/>
+                            </td>
+
+                            <td style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px;">
+                                <span t-esc="book.publication_date"/>
+                            </td>
+
+                            <td style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:right;">
+                                <span t-esc="book.pages"/>
+                            </td>
+
+                            <td style="border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; padding:8px; text-align:right;">
+                                <span t-esc="book.price"/>
+                            </td>
+
+                        </tr>
+                    </tbody>
+
+                </table>
 
                 </div>
 
-                <!-- ================= AUTHOR INFO ================= -->
-                <t t-foreach="docs" t-as="o">
+                <div class="footer" style="position:relative; margin-top:20px; font-size:12px;">
 
-                    <div style="border:1px solid #000; padding:10px; margin-bottom:20px;">
-                        
-                        <h4>Author Information</h4>
+                    <div style="border-top:1px solid #000; margin-bottom:8px;"></div>
 
-                        <p><strong>Name:</strong> <span t-esc="o.name"/></p>
-                        <p><strong>Gender:</strong> <span t-esc="o.gender"/></p>
-                        <p><strong>Country:</strong> <span t-esc="o.country_id.name"/></p>
+                    <div style="width:100%;">
 
-                        <t t-if="o.email">
-                            <p><strong>Email:</strong> <span t-esc="o.email"/></p>
-                        </t>
+                        <div style="float:left;">
+                            <img t-if="company.id"
+                                 t-att-src="'/web/image/res.company/%s/logo' % company.id"
+                                 style="height:35px;"/>
+                        </div>
 
-                        <p><strong>Phone:</strong> <span t-esc="o.phone"/></p>
-
-                    </div>
-
-                    <!-- ================= BOOK TABLE ================= -->
-                    <div style="border:1px solid #000; padding:10px;">
-
-                        <h4>Books Written</h4>
-
-                        <table class="table table-sm table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Book Name</th>
-                                    <th>ISBN</th>
-                                    <th>Publish Date</th>
-                                    <th>Pages</th>
-                                    <th>Price</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                <tr t-foreach="o.book_ids" t-as="book">
-                                    <td><span t-esc="book.name"/></td>
-
-                                    <td>
-                                        <t t-if="book.isbn">
-                                            <span t-esc="book.isbn"/>
-                                        </t>
-                                    </td>
-
-                                    <td>
-                                        <span t-esc="book.publish_date"/>
-                                    </td>
-
-                                    <td>
-                                        <t t-if="book.pages">
-                                            <span t-esc="book.pages"/>
-                                        </t>
-                                    </td>
-
-                                    <td>
-                                        <span t-esc="book.price"/>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div style="float:right;">
+                            Page <span class="page"/>/<span class="topage"/>
+                        </div>
 
                     </div>
+                </div>
 
-                </t>
-
-            </div>
+            </t>
         </t>
+
     </template>
+</odoo>
+
+
+
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+
+    <record id="paperformat_author" model="report.paperformat">
+        <field name="name">Author Report Paperformat</field>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">40</field>
+        <field name="margin_bottom">30</field>
+        <field name="margin_left">10</field>
+        <field name="margin_right">10</field>
+        <field name="header_spacing">20</field>
+    </record>
+
+    <record id="action_report_author_details" model="ir.actions.report">
+        <field name="name">Print</field>
+        <field name="model">author.author</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ak_library_search_domain.report_author_template</field>
+        <field name="report_file">ak_library_search_domain.report_author_template</field>
+        <field name="binding_model_id"
+               ref="ak_library_search_domain.model_author_author"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="ak_library_search_domain.paperformat_author"/>
+    </record>
 </odoo>
