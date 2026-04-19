@@ -1,43 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="report_invoice_document_inherit" inherit_id="account.report_invoice_document">
+        
+        <!-- 1. HIDE the original address block using attributes -->
+        <xpath expr="//t[@t-set='address']" position="attributes">
+            <attribute name="t-if">0</attribute>
+        </xpath>
 
-    <template id="custom_external_layout" inherit_id="web.external_layout">
+        <!-- 2. HIDE the original invoice info header (Date/Reference/Terms) -->
+        <xpath expr="//div[@id='informations']" position="attributes">
+            <attribute name="t-if">0</attribute>
+        </xpath>
 
-        <!-- HEADER -->
-        <xpath expr="//div[@class='header']" position="replace">
-            <div class="header" style="border-bottom:1px solid #000; padding:10px;">
-                <div class="row">
-                    
-                    <div class="col-6">
-                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:60px;"/>
+        <!-- 3. INSERT NEW TOP HEADER (Aligned with Logo) -->
+        <xpath expr="//div[@class='page']" position="before">
+            <!-- Use d-flex or row to align both sections at the top -->
+            <div class="row mb-4" style="border-bottom: 1px solid #dee2e6; padding-bottom: 10px;">
+                
+                <!-- Left Section: Invoice Details -->
+                <div class="col-6">
+                    <div t-if="o.name">
+                        <strong>Invoice Reference:</strong> <span t-field="o.name"/>
                     </div>
-
-                    <div class="col-6 text-end">
-                        <div t-esc="company.partner_id.contact_address"/>
-                        <div t-esc="company.email"/>
-                        <div t-esc="company.phone"/>
+                    <div t-if="o.invoice_date">
+                        <strong>Invoice Date:</strong> <span t-field="o.invoice_date"/>
                     </div>
+                    <div t-if="o.invoice_payment_term_id">
+                        <strong>Payment Term:</strong> <span t-field="o.invoice_payment_term_id.name"/>
+                    </div>
+                </div>
 
+                <!-- Right Section: Client Name & Address in BOLD -->
+                <div class="col-6 text-end" style="font-weight: bold; font-size: 1.1em;">
+                    <span t-field="o.partner_id.name"/><br/>
+                    <span t-field="o.partner_id.street"/><br/>
+                    <span t-if="o.partner_id.street2" t-field="o.partner_id.street2"/><br t-if="o.partner_id.street2"/>
+                    <span t-field="o.partner_id.city"/>, <span t-field="o.partner_id.country_id.name"/>
                 </div>
             </div>
         </xpath>
 
-        <!-- FOOTER -->
-        <xpath expr="//div[@class='footer']" position="replace">
-            <div class="footer" style="border-top:1px solid #000; padding:10px;">
-                <div class="row">
-
-                    <div class="col-6">
-                        <img t-if="company.logo" t-att-src="image_data_uri(company.logo)" style="max-height:40px;"/>
-                    </div>
-
-                    <div class="col-6 text-end">
-                        Page: <span class="page"/> / <span class="topage"/>
-                    </div>
-
+        <!-- 4. BANK ACCOUNT DETAILS after Total -->
+        <xpath expr="//div[@id='total']" position="after">
+            <div class="row mt-4">
+                <div class="col-12" style="border-top: 2px solid #000; padding-top: 10px;">
+                    <strong>Bank Account No.:</strong> 
+                    <span t-if="o.partner_bank_id" t-field="o.partner_bank_id.acc_number"/>
+                    <span t-else="" class="text-muted">No account specified</span>
                 </div>
             </div>
         </xpath>
 
     </template>
-
 </odoo>
