@@ -113,3 +113,28 @@
         </t>
     </template>
 </odoo>
+
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<odoo>
+    <record id="action_report_author_pdf" model="ir.actions.report">
+        <field name="name">PDF Author</field>
+        <field name="model">author.author</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ak_library_search_domain.report_author_template</field>
+        <field name="report_file">ak_library_search_domain.report_author_template</field>
+        <field name="binding_model_id" ref="ak_library_search_domain.model_author_author"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_author_detail" model="ir.actions.report">
+        <field name="name">Author Report</field>
+        <field name="model">author.author</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ak_library_search_domain.report_author_template</field>
+        <field name="report_file">ak_library_search_domain.report_author_template</field>
+        <field name="binding_model_id" ref="ak_library_search_domain.model_author_author"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>
