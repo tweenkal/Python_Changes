@@ -1,45 +1,52 @@
-from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
-from datetime import timedelta
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
 
-class LibraryBook(models.Model):
-    _name = 'library.book'
-    _description = 'Library Book'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    <template id="report_invoice_custom"
+              inherit_id="account.report_invoice_document">
 
-    name = fields.Char(string="Book Name", required=True, tracking=True)
-    # Assuming author is a Res Partner; author_user_id is the linked User
-    author_id = fields.Many2one('res.partner', string="Author", required=True)
-    author_user_id = fields.Many2one('res.users', string="Author User", required=True)
+        <!-- ========================= -->
+        <!-- 1. CUSTOMER NAME + ADDRESS BOLD -->
+        <!-- ========================= -->
+        <xpath expr="//t[@t-set='address']" position="inside">
+            <div>
+                <strong t-field="o.partner_id.name"/>
+            </div>
+        </xpath>
 
-    _sql_constraints = [
-        ('unique_author_book', 'unique(name, author_id)', 'This author already has a book with the same name.')
-    ]
+        <!-- ========================= -->
+        <!-- 2. INVOICE DETAILS (TOP ALIGN) -->
+        <!-- ========================= -->
+        <xpath expr="//div[contains(@class,'mt32 mb32')]" position="inside">
+            <div>
+                <p>
+                    <strong>Invoice Reference:</strong>
+                    <span t-field="o.name"/>
+                </p>
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        books = super(LibraryBook, self).create(vals_list)
-        
-        for book in books:
-            # 1. Log Note on Book Creation
-            log_message = _("Book %s has been created by %s at %s") % (
-                book.name, self.env.user.name, fields.Datetime.now()
-            )
-            book.message_post(body=log_message, subtype_xmlid='mail.mt_note')
+                <p>
+                    <strong>Invoice Date:</strong>
+                    <span t-field="o.invoice_date"/>
+                </p>
 
-            # 2. Send Notification to Author
-            notification_message = _("Your book %s is released by %s at %s. Please review your book and let us know if any corrections are required.") % (
-                book.name, book.author_user_id.name, fields.Datetime.now()
-            )
-            book.author_user_id.notify_info(message=notification_message, title="Book Released", sticky=True)
+                <p>
+                    <strong>Payment Term:</strong>
+                    <span t-field="o.invoice_payment_term_id.name"/>
+                </p>
+            </div>
+        </xpath>
 
-            # 3. Create Activity for Author
-            book.activity_schedule(
-                'mail.mail_activity_data_todo',
-                summary=_("Review your release %s") % book.name,
-                note=_("Please review the book. It is ready for release."),
-                user_id=book.author_user_id.id,
-                date_deadline=fields.Date.today() + timedelta(days=2)
-            )
-            
-        return books
+        <!-- ========================= -->
+        <!-- 3. BANK ACCOUNT AFTER TOTAL -->
+        <!-- ========================= -->
+        <xpath expr="//div[@id='total']" position="after">
+            <div>
+                <p>
+                    <strong>Bank Account No:</strong>
+                    <span t-field="o.partner_bank_id.acc_number"/>
+                </p>
+            </div>
+        </xpath>
+
+    </template>
+
+</odoo>
