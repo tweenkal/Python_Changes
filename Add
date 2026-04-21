@@ -1,52 +1,55 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
+
 <odoo>
+    <template id="report_invoice_document_inherit"
+                  inherit_id="account.report_invoice_document">
 
-    <template id="report_invoice_custom"
-              inherit_id="account.report_invoice_document">
+        <xpath expr="//div[@name='address_same_as_shipping']//address"
+               position="attributes">
+            <attribute name="style">margin-bottom:0; font-weight:bold;</attribute>
+        </xpath>
 
-        <!-- ========================= -->
-        <!-- 1. CUSTOMER NAME + ADDRESS BOLD -->
-        <!-- ========================= -->
-        <xpath expr="//t[@t-set='address']" position="inside">
-            <div>
-                <strong t-field="o.partner_id.name"/>
+        <xpath expr="//div[@id='informations']" position="attributes">
+            <attribute name="t-if">False</attribute>
+        </xpath>
+
+       <xpath expr="//div[@id='informations']" position="before">
+            <div class="row mt-3 mb-3">
+
+                <!-- left aligned with logo -->
+                <div class="col-6">
+
+                    <div class="mb-1">
+                        <strong>Invoice Reference:</strong>
+                        <span t-field="o.name"/>
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Invoice Date:</strong>
+                        <span t-field="o.invoice_date"/>
+                    </div>
+
+                    <div class="mb-1">
+                        <strong>Payment Term:</strong>
+                        <span t-field="o.invoice_payment_term_id.name"/>
+                    </div>
+
+                </div>
+
             </div>
         </xpath>
 
-        <!-- ========================= -->
-        <!-- 2. INVOICE DETAILS (TOP ALIGN) -->
-        <!-- ========================= -->
-        <xpath expr="//div[contains(@class,'mt32 mb32')]" position="inside">
-            <div>
-                <p>
-                    <strong>Invoice Reference:</strong>
-                    <span t-field="o.name"/>
-                </p>
-
-                <p>
-                    <strong>Invoice Date:</strong>
-                    <span t-field="o.invoice_date"/>
-                </p>
-
-                <p>
-                    <strong>Payment Term:</strong>
-                    <span t-field="o.invoice_payment_term_id.name"/>
-                </p>
-            </div>
+        <xpath expr="//span[@t-field='o.partner_bank_id']"
+               position="attributes">
+            <attribute name="t-if">False</attribute>
         </xpath>
-
-        <!-- ========================= -->
-        <!-- 3. BANK ACCOUNT AFTER TOTAL -->
-        <!-- ========================= -->
+        
         <xpath expr="//div[@id='total']" position="after">
-            <div>
-                <p>
-                    <strong>Bank Account No:</strong>
-                    <span t-field="o.partner_bank_id.acc_number"/>
-                </p>
+            <div class="ms-auto">
+                <strong>Bank Account No.:</strong>
+                <span t-field="o.partner_bank_id"/>
             </div>
         </xpath>
 
     </template>
-
 </odoo>
